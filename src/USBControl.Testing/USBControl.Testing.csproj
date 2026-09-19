@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>USBControl.Testing</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\USBControl.Core\USBControl.Core.csproj" />
+    <ProjectReference Include="..\USBControl.App\USBControl.App.csproj" />
+  </ItemGroup>
+
+</Project>

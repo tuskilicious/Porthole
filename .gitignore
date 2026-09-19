@@ -1,0 +1,8 @@
+bin/
+obj/
+publish/
+*.user
+.vs/
+.dotnet/
+dotnet-install.ps1
+.freebuff/

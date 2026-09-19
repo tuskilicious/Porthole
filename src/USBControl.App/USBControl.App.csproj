@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>USBControl.App</RootNamespace>
+    <AssemblyName>USBControl</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\usb.ico</ApplicationIcon>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <Version>0.1.0</Version>
+    <AssemblyTitle>USB Control</AssemblyTitle>
+    <Product>USB Control</Product>
+    <Description>Visual USB port manager — one-click enable/disable, names, photos, profiles.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\usb.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\USBControl.Core\USBControl.Core.csproj" />
+    <ProjectReference Include="..\USBControl.Hardware\USBControl.Hardware.csproj" />
+  </ItemGroup>
+
+</Project>
