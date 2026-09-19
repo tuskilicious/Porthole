@@ -22,6 +22,9 @@ public sealed class HubGroupViewModel
 
     public string DisplayName => Entry.DisplayName;
 
+    /// <summary>Visible port count for the HUD-style hub header.</summary>
+    public int PortCount => Ports.Count;
+
     public HubGroupViewModel(AppController controller, HubGroup entry)
     {
         Controller = controller;
@@ -116,6 +119,39 @@ public sealed class PortViewModel : INotifyPropertyChanged
     public bool IsProblem => Entry.State == PortState.Problem;
     public bool IsHub => Entry.Device?.IsHub ?? false;
     public bool GameRelevant => Entry.Device?.GameRelevant ?? false;
+
+    /// <summary>Device-type glyph for the tile badge (photo takes precedence in the UI).</summary>
+    public string DeviceIconText => Entry.Device is null
+        ? "🔌"
+        : ClassifyIcon(Entry.Device);
+
+    private static string ClassifyIcon(UsbDeviceInfo d)
+    {
+        if (d.IsHub)
+            return "🔗";
+        var hw = d.HardwareId ?? "";
+        var cls = d.ClassName ?? "";
+
+        if (cls is "HIDClass" or "HID")
+        {
+            if (hw.Contains("MusHID", StringComparison.OrdinalIgnoreCase) ||
+                hw.Contains("Mouse", StringComparison.OrdinalIgnoreCase) ||
+                hw.Contains("VID_046D&PID_C08", StringComparison.OrdinalIgnoreCase))
+                return "🖱";
+            if (hw.Contains("Keyboard", StringComparison.OrdinalIgnoreCase))
+                return "⌨";
+        }
+        if (cls is "AudioEndpoint" or "MEDIA" or "AudioProcessingObject")
+            return "🎧";
+        if (cls is "WPD" or "DiskDrive" or "USBStorage" ||
+            hw.Contains("SCSI", StringComparison.OrdinalIgnoreCase) && hw.Contains("Disk", StringComparison.OrdinalIgnoreCase))
+            return "💾";
+        if (cls is "Display" or "Monitor")
+            return "🖥";
+        if (cls is "XInput" or "GameControl" || d.IsController || d.GameRelevant)
+            return "🎮";
+        return "🔌";
+    }
 
     public string InstanceId => Entry.Device?.InstanceId ?? "";
 

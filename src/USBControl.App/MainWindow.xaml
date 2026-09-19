@@ -22,6 +22,8 @@
             <Style.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{StaticResource CardHoverBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AccentDimBrush}" />
+                <Setter Property="Effect" Value="{StaticResource AccentGlowEffect}" />
               </Trigger>
               <DataTrigger Binding="{Binding IsConnected}" Value="True">
                 <Setter Property="BorderBrush" Value="#FF2E5E49" />
@@ -33,7 +35,7 @@
                 <Setter Property="BorderBrush" Value="{StaticResource WarnBrush}" />
               </DataTrigger>
               <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                <Setter Property="Opacity" Value="0.6" />
+                <Setter Property="Opacity" Value="0.62" />
               </DataTrigger>
             </Style.Triggers>
           </Style>
@@ -48,35 +50,101 @@
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Border Width="52" Height="52" CornerRadius="8" Background="#FF14161B"
+
+            <!-- icon badge: device photo if set, else type glyph -->
+            <Border Width="50" Height="50" CornerRadius="9" Background="{StaticResource FieldBrush}"
+                    BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                     Margin="0,0,10,0">
               <Grid>
                 <Image Source="{Binding PhotoPath, Converter={StaticResource PhotoConverter}}"
-                       Stretch="Uniform" />
-                <TextBlock Text="🔌" FontSize="24" HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
+                       Stretch="Uniform" Margin="3" />
+                <TextBlock Text="{Binding DeviceIconText}" FontSize="22"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}" />
               </Grid>
             </Border>
+
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-              <TextBlock Text="{Binding PortTitle}" FontSize="12"
+              <TextBlock Text="{Binding PortTitle}" FontSize="11"
                          Foreground="{StaticResource TextDimBrush}"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{Binding DeviceName}" FontSize="13.5" FontWeight="SemiBold"
                          TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"
                          MaxHeight="40" />
-              <TextBlock Text="{Binding StateText}" FontSize="11.5"
-                         Foreground="{StaticResource TextDimBrush}" />
               <TextBlock Text="{Binding Subtitle}" FontSize="10.5"
+                         FontFamily="Consolas"
                          TextTrimming="CharacterEllipsis"
-                         Foreground="{StaticResource TextDimBrush}" />
+                         Foreground="{StaticResource TextDimBrush}" Margin="0,1,0,0" />
             </StackPanel>
+
             <StackPanel Grid.Column="2" VerticalAlignment="Center">
               <Button Style="{StaticResource PowerButton}"
                       ToolTip="Enable / disable (like Device Manager) — red disables, green re-enables"
                       Command="{Binding ToggleCommand}" />
             </StackPanel>
           </Grid>
+
+          <!-- HUD status chip row -->
+          <Border Margin="0,9,0,0">
+            <Border.Style>
+              <Style TargetType="Border" BasedOn="{StaticResource HudChipBorder}">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                    <Setter Property="BorderBrush" Value="#55E2574A" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsProblem}" Value="True">
+                    <Setter Property="BorderBrush" Value="#55EDB44A" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsHub}" Value="True">
+                    <Setter Property="BorderBrush" Value="#554CC2FF" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
+            <StackPanel Orientation="Horizontal">
+              <Ellipse Margin="0,0,5,0">
+                <Ellipse.Style>
+                  <Style TargetType="Ellipse" BasedOn="{StaticResource HudChipDot}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                        <Setter Property="Fill" Value="{StaticResource BadBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsProblem}" Value="True">
+                        <Setter Property="Fill" Value="{StaticResource WarnBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsHub}" Value="True">
+                        <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                        <Setter Property="Fill" Value="{StaticResource GoodBrush}" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Ellipse.Style>
+              </Ellipse>
+              <TextBlock Text="{Binding StateText}">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource HudChipLabel}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsProblem}" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsHub}" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+            </StackPanel>
+          </Border>
+
           <TextBlock Text="{Binding HubName}" FontSize="10"
                      Foreground="{StaticResource TextDimBrush}"
                      Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
@@ -86,62 +154,66 @@
   </Window.Resources>
 
   <DockPanel>
-    <!-- ===================== toolbar ===================== -->
-    <Border DockPanel.Dock="Top" Background="#FF111318" Padding="12,8"
+    <!-- ===================== top bar (accent-tinted gradient) ===================== -->
+    <Border DockPanel.Dock="Top" Background="{StaticResource TopbarBrush}" Padding="14,9"
             BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-      <DockPanel>
-        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-          <TextBlock Text="⚡ USB Control" FontSize="17" FontWeight="SemiBold"
-                     Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,18,0" />
-          <Button Content="Refresh" Command="{Binding RefreshCommand}" />
-          <Button Content="Show all devices" Margin="6,0,0,0" Command="{Binding ToggleShowAllCommand}" />
-          <Button Content="Show empty ports" Margin="6,0,0,0" Command="{Binding ToggleShowEmptyCommand}" />
-          <Button Content="Show hidden" Margin="6,0,0,0" Command="{Binding ToggleShowHiddenCommand}" />
-          <ToggleButton Margin="14,0,0,0" IsChecked="{Binding Controller.IsPanelMode}"
-                        ToolTip="Rear-panel view: drag tiles to mirror the physical ports on your case">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="🖥 " />
-              <TextBlock Text="Panel layout" />
-            </StackPanel>
-          </ToggleButton>
-          <Button Content="Reset panel" Margin="6,0,0,0" Command="{Binding ResetPanelLayoutCommand}"
-                  ToolTip="Forget all dragged positions"
-                  Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource BoolToVis}}" />
-        </StackPanel>
+      <Grid>
+        <!-- accent wash layer -->
+        <Border Background="{StaticResource TopbarGradient}" IsHitTestVisible="False" />
+        <DockPanel>
+          <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+            <TextBlock Text="⚡ USB CONTROL" FontSize="16" FontWeight="Bold"
+                       Foreground="{StaticResource TextBrush}"
+                       VerticalAlignment="Center" Margin="0,0,4,0" />
+            <Border Width="3" Height="16" Background="{StaticResource AccentBrush}"
+                    CornerRadius="1.5" VerticalAlignment="Center" Margin="0,0,16,0" />
+            <Button Content="⟳  Refresh" Command="{Binding RefreshCommand}" />
+            <ToggleButton IsChecked="{Binding Controller.ShowAllDevices}" Margin="6,0,0,0"
+                          ToolTip="Show every USB device (not just controllers/hubs)"
+                          Content="All devices" />
+            <ToggleButton IsChecked="{Binding Controller.ShowEmptyPorts}" Margin="6,0,0,0"
+                          ToolTip="Show ports with nothing plugged in"
+                          Content="Empty ports" />
+            <ToggleButton IsChecked="{Binding Controller.ShowHiddenPorts}" Margin="6,0,0,0"
+                          ToolTip="Show ports you hid"
+                          Content="Hidden" />
+            <ToggleButton Margin="14,0,0,0" IsChecked="{Binding Controller.IsPanelMode}"
+                          ToolTip="Rear-panel view: drag tiles to mirror the physical ports on your case">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="🖥 " />
+                <TextBlock Text="Panel layout" />
+              </StackPanel>
+            </ToggleButton>
+            <Button Content="Reset panel" Margin="6,0,0,0" Command="{Binding ResetPanelLayoutCommand}"
+                    ToolTip="Forget all dragged positions"
+                    Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource BoolToVis}}" />
+          </StackPanel>
 
-        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-          <ComboBox x:Name="ProfileBox" ItemsSource="{Binding Controller.ProfileList}"
-                    SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name"
-                    MinWidth="160" VerticalAlignment="Center" />
-          <Button Content="Apply" Margin="6,0,0,0" Command="{Binding ApplyProfileCommand}" />
-          <Button Content="Save current as…" Margin="6,0,0,0" Command="{Binding CaptureProfileCommand}" />
-          <Button Content="🗑" Margin="6,0,0,0" ToolTip="Delete selected profile"
-                  Command="{Binding DeleteProfileCommand}" />
-        </StackPanel>
-      </DockPanel>
+          <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                      VerticalAlignment="Center">
+            <ComboBox x:Name="ProfileBox" ItemsSource="{Binding Controller.ProfileList}"
+                      SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name"
+                      MinWidth="170" VerticalAlignment="Center" />
+            <Button Content="Apply" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}"
+                    Command="{Binding ApplyProfileCommand}" />
+            <Button Content="Save current as…" Margin="6,0,0,0" Command="{Binding CaptureProfileCommand}" />
+            <Button Content="🗑" Margin="6,0,0,0" ToolTip="Delete selected profile"
+                    Command="{Binding DeleteProfileCommand}" />
+          </StackPanel>
+        </DockPanel>
+      </Grid>
     </Border>
 
     <!-- ===================== status bar ===================== -->
-    <Border DockPanel.Dock="Bottom" Background="#FF111318" Padding="12,6"
+    <Border DockPanel.Dock="Bottom" Background="{StaticResource TopbarBrush}" Padding="14,7"
             BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
       <DockPanel>
-        <Button DockPanel.Dock="Right" Content="Settings…" Command="{Binding OpenSettingsCommand}"
+        <Button DockPanel.Dock="Right" Content="⚙  Settings…" Command="{Binding OpenSettingsCommand}"
                 VerticalAlignment="Center" />
         <StackPanel Orientation="Horizontal">
-          <Ellipse Width="9" Height="9" Margin="0,0,7,0">
-            <Ellipse.Style>
-              <Style TargetType="Ellipse">
-                <Setter Property="Fill" Value="{StaticResource GoodBrush}" />
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                    <Setter Property="Fill" Value="{StaticResource WarnBrush}" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </Ellipse.Style>
-          </Ellipse>
+          <Ellipse Style="{StaticResource BusySpinner}" Margin="0,0,8,0" />
           <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource TextDimBrush}"
-                     VerticalAlignment="Center" />
+                     VerticalAlignment="Center" FontSize="12" />
         </StackPanel>
       </DockPanel>
     </Border>
@@ -154,18 +226,25 @@
       </Grid.ColumnDefinitions>
 
       <!-- auto view (grouped by hub) -->
-      <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12,10,6,10"
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14,12,8,12"
                     Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource InverseBoolToVis}}">
         <StackPanel>
           <ItemsControl ItemsSource="{Binding Controller.Hubs}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <StackPanel Margin="0,4,0,14">
+                <StackPanel Margin="0,4,0,16">
                   <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                    <Border Width="3" Height="14" Background="{StaticResource AccentBrush}"
+                    <Border Width="3" Height="13" Background="{StaticResource AccentBrush}"
                             CornerRadius="1.5" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding DisplayName}" FontSize="13.5" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextBrush}" Margin="8,0,0,0" />
+                    <TextBlock Text="{Binding DisplayName}" FontSize="12.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}" Margin="9,0,0,0"
+                               Typography.Capitals="AllSmallCaps" />
+                    <TextBlock FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"
+                               FontFamily="Consolas"
+                               Foreground="{StaticResource TextDimBrush}">
+                      <Run Text="{Binding PortCount, Mode=OneWay}" />
+                      <Run Text="ports" />
+                    </TextBlock>
                   </StackPanel>
                   <ItemsControl ItemsSource="{Binding Ports}">
                     <ItemsControl.ItemsPanel>
@@ -185,9 +264,17 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
 
-          <TextBlock Text="No USB ports found yet — the app runs elevated (Device-Manager rights), so accept the prompt and hit Refresh."
-                     Foreground="{StaticResource TextDimBrush}" Margin="2,10,0,0" TextWrapping="Wrap"
-                     Visibility="{Binding HasNoHubs, Converter={StaticResource BoolToVis}}" />
+          <!-- empty state -->
+          <StackPanel HorizontalAlignment="Center" Margin="0,60,0,0"
+                      Visibility="{Binding HasNoHubs, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="🔌" FontSize="42" HorizontalAlignment="Center" Opacity="0.5" />
+            <TextBlock Text="No USB ports found yet" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center"
+                       Margin="0,10,0,0" />
+            <TextBlock Text="The app runs elevated (Device-Manager rights) — accept the prompt, then hit Refresh."
+                       Foreground="{StaticResource TextDimBrush}" HorizontalAlignment="Center"
+                       Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" />
+          </StackPanel>
         </StackPanel>
       </ScrollViewer>
 
@@ -198,12 +285,12 @@
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Margin="14,10,14,4" FontSize="11.5"
+        <TextBlock Margin="16,10,16,4" FontSize="11.5"
                    Foreground="{StaticResource TextDimBrush}"
                    Text="Drag tiles to mirror your case's rear panel. Layout is saved automatically. Double-click still opens the editor." />
 
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                      Padding="12,4,6,10">
+                      Padding="14,4,8,10">
           <Canvas Width="1400" Height="900" Background="{StaticResource PanelGridBrush}">
             <ItemsControl ItemsSource="{Binding Controller.PanelPorts}">
               <ItemsControl.ItemsPanel>
@@ -230,32 +317,41 @@
       </Grid>
 
       <!-- ===================== device editor panel ===================== -->
-      <Border Grid.Column="1" Width="290" Margin="6,10,12,10" Padding="14"
+      <Border Grid.Column="1" Width="290" Margin="8,12,14,12" Padding="16"
               Background="{StaticResource CardBrush}"
               BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-              CornerRadius="10">
+              CornerRadius="12">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel DataContext="{Binding SelectedPort}">
-            <TextBlock Text="Device editor" FontSize="13" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextDimBrush}" Margin="0,0,0,10" />
-            <TextBlock Text="Port label" Foreground="{StaticResource TextDimBrush}" FontSize="11" />
-            <TextBox Text="{Binding EditPortLabel, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,10" />
-            <TextBlock Text="Device name (yours)" Foreground="{StaticResource TextDimBrush}" FontSize="11" />
-            <TextBox Text="{Binding EditDeviceName, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,10" />
-            <TextBlock Text="Note" Foreground="{StaticResource TextDimBrush}" FontSize="11" />
-            <TextBox Text="{Binding EditNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,10"
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+              <Border Width="3" Height="13" Background="{StaticResource AccentBrush}"
+                      CornerRadius="1.5" VerticalAlignment="Center" />
+              <TextBlock Text="DEVICE EDITOR" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{StaticResource TextBrush}" Margin="9,0,0,0"
+                         Typography.Capitals="AllSmallCaps" />
+            </StackPanel>
+
+            <TextBlock Text="PORT LABEL" Foreground="{StaticResource TextDimBrush}" FontSize="10.5" />
+            <TextBox Text="{Binding EditPortLabel, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,12" />
+            <TextBlock Text="DEVICE NAME (YOURS)" Foreground="{StaticResource TextDimBrush}" FontSize="10.5" />
+            <TextBox Text="{Binding EditDeviceName, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,12" />
+            <TextBlock Text="NOTE" Foreground="{StaticResource TextDimBrush}" FontSize="10.5" />
+            <TextBox Text="{Binding EditNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,12"
                      AcceptsReturn="True" Height="56" />
             <Button Content="Choose photo…" Command="{Binding PickPhotoCommand}" HorizontalAlignment="Left" />
             <Border Height="10" />
-            <Border CornerRadius="8" Background="#FF14161B" Height="130">
+            <Border CornerRadius="8" Background="{StaticResource FieldBrush}" Height="130"
+                    BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
               <Image Source="{Binding PhotoPath, Converter={StaticResource PhotoConverter}}" Stretch="Uniform" />
             </Border>
             <Button Content="Remove photo" Margin="0,10,0,0" Command="{Binding ClearPhotoCommand}"
                     HorizontalAlignment="Left" />
-            <Separator Margin="0,10,0,0" Background="{StaticResource BorderBrush}" />
-            <TextBlock Text="{Binding Subtitle}" FontSize="11" Foreground="{StaticResource TextDimBrush}"
-                       TextWrapping="Wrap" Margin="0,10,0,0" />
-            <TextBlock Text="{Binding InstanceId}" FontSize="10" Foreground="{StaticResource TextDimBrush}"
+            <Separator Margin="0,12,0,0" Background="{StaticResource BorderBrush}" />
+            <TextBlock Text="{Binding Subtitle}" FontSize="11" FontFamily="Consolas"
+                       Foreground="{StaticResource TextDimBrush}"
+                       TextWrapping="Wrap" Margin="0,12,0,0" />
+            <TextBlock Text="{Binding InstanceId}" FontSize="10" FontFamily="Consolas"
+                       Foreground="{StaticResource TextDimBrush}"
                        TextWrapping="Wrap" Margin="0,4,0,0" />
           </StackPanel>
         </ScrollViewer>

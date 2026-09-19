@@ -16,6 +16,11 @@ without reaching behind the case or unplugging anything.
 
 ## Features
 
+- **Gaming-HUD design** — deep-charcoal cockpit UI with five switchable neon accent palettes
+  (Cyan, Violet, Toxic, Blood, Amber — switch live in Settings), animated hover glows, and
+  HUD-style status chips with LED dots (online / off / issue). Every tile shows a device-type
+  icon (controller, keyboard, mouse, audio, hub, storage) or your photo, with a spinning status
+  indicator while the bus is busy.
 - **Live port map** — walks the real USB tree (controllers → root hubs → downstream hubs → ports)
   using the same user-mode hub IOCTLs as Microsoft's USBView sample. Every physical port is a tile,
   grouped by hub, refreshed automatically when devices arrive/leave.

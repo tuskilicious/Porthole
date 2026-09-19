@@ -272,29 +272,66 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
     // ---------------- view toggles ----------------
 
+    // Observable wrappers so toolbar ToggleButtons can two-way-bind (the Settings
+    // checkboxes bind the raw Settings object; both paths converge on ApplyShowFlags).
+
+    public bool ShowAllDevices
+    {
+        get => Settings.ShowAllDevices;
+        set { Settings.ShowAllDevices = value; ApplyShowFlags(); }
+    }
+
+    public bool ShowEmptyPorts
+    {
+        get => Settings.ShowEmptyPorts;
+        set { Settings.ShowEmptyPorts = value; ApplyShowFlags(); }
+    }
+
+    public bool ShowHiddenPorts
+    {
+        get => Settings.ShowHiddenPorts;
+        set { Settings.ShowHiddenPorts = value; ApplyShowFlags(); }
+    }
+
+    private void ApplyShowFlags()
+    {
+        OnPropertyChanged(nameof(ShowAllDevices));
+        OnPropertyChanged(nameof(ShowEmptyPorts));
+        OnPropertyChanged(nameof(ShowHiddenPorts));
+        Store.Save();
+        _ = RefreshAsync();
+    }
+
     public void SetShowAll(bool value)
     {
         Settings.ShowAllDevices = value;
-        Store.Save();
-        _ = RefreshAsync();
+        ApplyShowFlags();
     }
 
     public void SetShowEmpty(bool value)
     {
         Settings.ShowEmptyPorts = value;
-        Store.Save();
-        _ = RefreshAsync();
+        ApplyShowFlags();
     }
 
     public void SetShowHidden(bool value)
     {
         Settings.ShowHiddenPorts = value;
-        Store.Save();
-        _ = RefreshAsync();
+        ApplyShowFlags();
     }
 
     /// <summary>Re-applies current settings after the settings dialog saved them.</summary>
     public void RefreshFromSettings() => _ = RefreshAsync();
+
+    /// <summary>Switches the neon accent palette live and persists the choice.</summary>
+    public void SetAccent(string name)
+    {
+        if (Settings.Accent.Equals(name, StringComparison.OrdinalIgnoreCase))
+            return;
+        Settings.Accent = name;
+        Store.Save();
+        Accents.Apply(name);
+    }
 
     // ---------------- panel layout ----------------
 

@@ -108,6 +108,10 @@ public sealed class AppSettings
     public bool StartWithWindows { get; set; }
     public bool MinimizeToTray { get; set; } = true;
     public string Theme { get; set; } = "Dark";
+
+    /// <summary>Neon accent palette name (see App: Accents catalog). One of Cyan/Violet/Toxic/Blood/Amber.</summary>
+    public string Accent { get; set; } = "Cyan";
+
     public string? LastProfile { get; set; }
 }
 

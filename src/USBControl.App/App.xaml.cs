@@ -28,6 +28,7 @@ public partial class App : Application
 
         var store = new AppStore();
         store.Load();
+        Accents.Apply(store.Data.Settings.Accent);
         Controller = new AppController(store, new UsbTopologyService(), new DevicePowerService());
 
         var win = new MainWindow();
