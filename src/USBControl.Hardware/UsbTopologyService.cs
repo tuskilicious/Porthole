@@ -54,7 +54,13 @@ public sealed class UsbTopologyService : ITopologyService
             {
                 var rootHub = GetRootHubName(path);
                 if (!string.IsNullOrEmpty(rootHub))
-                    paths.Add(rootHub);
+                {
+                    // The driver returns a bare symbolic-link name (USB#ROOT_HUB30#…#{guid});
+                    // CreateFileW only opens it with the \\?\ device-path prefix.
+                    paths.Add(rootHub.StartsWith("\\\\?\\", StringComparison.Ordinal)
+                        ? rootHub
+                        : "\\\\?\\" + rootHub);
+                }
             }
             catch
             {
@@ -125,23 +131,36 @@ public sealed class UsbTopologyService : ITopologyService
 
         try
         {
-            // First call sizes the buffer, second retrieves USB_ROOT_HUB_NAME.
-            if (!Native.DeviceIoControl(handle, Native.IOCTL_USB_GET_ROOT_HUB_NAME,
-                    IntPtr.Zero, 0, IntPtr.Zero, 0, out int needed, IntPtr.Zero) && needed == 0)
-            {
-                Diag.Log($"root hub name: sizing call failed (needed={needed}, err={Marshal.GetLastWin32Error()})");
-                return "";
-            }
-
-            var ptr = Marshal.AllocHGlobal(needed);
+            // USB_ROOT_HUB_NAME: ULONG ActualLength(4); WCHAR RootHubName[] → string at offset 4.
+            // Pass a real buffer like USBView does: a zero-size sizing call returns FALSE
+            // without setting bytesReturned on some USB stacks, which used to make every
+            // controller (and therefore the whole tree) vanish.
+            var size = 512;
+            var ptr = Marshal.AllocHGlobal(size);
             try
             {
                 if (!Native.DeviceIoControl(handle, Native.IOCTL_USB_GET_ROOT_HUB_NAME,
-                        IntPtr.Zero, 0, ptr, needed, out _, IntPtr.Zero))
-                    return "";
+                        IntPtr.Zero, 0, ptr, size, out int needed, IntPtr.Zero))
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    if (err != 122 /* ERROR_INSUFFICIENT_BUFFER */ || needed is <= 0 or > 65536)
+                    {
+                        Diag.Log($"root hub name: ioctl failed, err={err}");
+                        return "";
+                    }
 
-                // USB_ROOT_HUB_NAME: ULONG ActualLength(4); WCHAR RootHubName[] → chars start at 8.
-                var name = ReadUnicodeAfterHeader(ptr, 8);
+                    // Buffer was too small — retry with the size the driver asked for.
+                    Marshal.FreeHGlobal(ptr);
+                    ptr = Marshal.AllocHGlobal(needed);
+                    if (!Native.DeviceIoControl(handle, Native.IOCTL_USB_GET_ROOT_HUB_NAME,
+                            IntPtr.Zero, 0, ptr, needed, out _, IntPtr.Zero))
+                    {
+                        Diag.Log($"root hub name: retry failed, err={Marshal.GetLastWin32Error()}");
+                        return "";
+                    }
+                }
+
+                var name = ReadUnicodeAfterHeader(ptr, 4);
                 Diag.Log($"root hub name: '{name}'");
                 return name;
             }
@@ -167,7 +186,7 @@ public sealed class UsbTopologyService : ITopologyService
             Marshal.WriteInt32(ptr, 0, unchecked((int)portIndex)); // ConnectionIndex
 
             if (!Native.DeviceIoControl(hubHandle, Native.IOCTL_USB_GET_NODE_CONNECTION_NAME,
-                    IntPtr.Zero, 0, ptr, size, out _, IntPtr.Zero))
+                    ptr, size, ptr, size, out _, IntPtr.Zero))
                 return "";
 
             // IOCTL_USB_GET_NODE_CONNECTION_NAME returns USB_NODE_CONNECTION_NAME:
@@ -217,15 +236,24 @@ public sealed class UsbTopologyService : ITopologyService
     {
         var handle = OpenHub(hubPath);
         if (handle == IntPtr.Zero)
+        {
+            Diag.Log($"hub {hubPath}: open failed, err={Marshal.GetLastWin32Error()}");
             return;
+        }
 
         try
         {
             if (!GetNodeInformation(handle, out var nodeInfo))
+            {
+                Diag.Log($"hub {hubPath}: node information failed, err={Marshal.GetLastWin32Error()}");
                 return;
+            }
             var portCount = nodeInfo.HubDescriptor_bNumberOfPorts;
             if (portCount is 0 or > 32)
+            {
+                Diag.Log($"hub {hubPath}: implausible port count {portCount}");
                 return;
+            }
 
             var hubInstanceId = DevicePathToInstanceId(hubPath);
             var hubGroup = new HubGroup
@@ -279,13 +307,21 @@ public sealed class UsbTopologyService : ITopologyService
         {
             Marshal.WriteInt32(ptr, 0, unchecked((int)portIndex));
 
+            // Port-index IOCTLs take the same buffer as input AND output; the input must
+            // carry ConnectionIndex (a NULL input buffer fails with ERROR_INVALID_PARAMETER).
             if (!Native.DeviceIoControl(hubHandle, Native.IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX,
-                    IntPtr.Zero, 0, ptr, size, out _, IntPtr.Zero))
+                    ptr, size, ptr, size, out _, IntPtr.Zero))
+            {
+                Diag.Log($"port {hubKey}#{portIndex}: connection info failed, err={Marshal.GetLastWin32Error()}");
                 return entry;
+            }
 
             var info = Marshal.PtrToStructure<Native.USB_NODE_CONNECTION_INFORMATION_EX>(ptr);
             if (info.ConnectionStatus == 0 /* NoDeviceConnected */ && info.DeviceDescriptor.idVendor == 0)
+            {
+                Diag.Log($"port {hubKey}#{portIndex}: empty (status={info.ConnectionStatus}, vid=0x{info.DeviceDescriptor.idVendor:X4})");
                 return entry; // empty port
+            }
 
             var descriptor = info.DeviceDescriptor;
             var instanceId = GetConnectionInstanceId(hubHandle, portIndex);
@@ -346,7 +382,7 @@ public sealed class UsbTopologyService : ITopologyService
             Marshal.WriteInt32(ptr, 0, unchecked((int)portIndex));
 
             if (!Native.DeviceIoControl(hubHandle, Native.IOCTL_USB_GET_NODE_CONNECTION_DRIVERKEY_NAME,
-                    IntPtr.Zero, 0, ptr, size, out _, IntPtr.Zero))
+                    ptr, size, ptr, size, out _, IntPtr.Zero))
                 return null;
 
             // USB_NODE_CONNECTION_DRIVERKEY_NAME: ULONG ConnectionIndex; ULONG ActualLength; WCHAR DriverKeyName[]
@@ -380,7 +416,8 @@ public sealed class UsbTopologyService : ITopologyService
             Marshal.WriteInt16(ptr, 10, (short)bufferLen);
 
             if (!Native.DeviceIoControl(hubHandle, IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION,
-                    IntPtr.Zero, 0, ptr, requestSize + bufferLen, out int returned, IntPtr.Zero))
+                    ptr, requestSize + bufferLen, ptr, requestSize + bufferLen,
+                    out int returned, IntPtr.Zero))
                 return null;
 
             // Response after the request header: BYTE bLength, bDescriptorType, WCHAR bString[]

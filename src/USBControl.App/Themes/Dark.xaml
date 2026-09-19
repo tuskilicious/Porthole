@@ -11,8 +11,11 @@
   <Color x:Key="TextPrimaryColor">#FFE9EDF2</Color>
   <Color x:Key="TextDimColor">#FF8E98A8</Color>
 
-  <!-- AccentColor / AccentDimColor / AccentGlowColor / BrandGradient come from the
-       swappable accent dictionary (Accents.cs) so they can change live in Settings. -->
+  <!-- AccentBrush / AccentDimBrush / AccentGlowBrush / TopbarGradient / BrandGradient /
+       AccentGlowEffect(+) come from the swappable accent dictionary (Accents.cs), which
+       rebuilds them frozen on every switch. They must NOT be re-declared here: WPF
+       forbids DynamicResource inside Freezables (GradientStop/SolidColorBrush/Effect).
+       Consumers reference them with DynamicResource at the setter level. -->
 
   <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
   <SolidColorBrush x:Key="TopbarBrush" Color="{StaticResource TopbarColor}" />
@@ -27,25 +30,6 @@
   <SolidColorBrush x:Key="GoodBrush" Color="#FF3FD08C" />
   <SolidColorBrush x:Key="WarnBrush" Color="#FFEDB44A" />
   <SolidColorBrush x:Key="BadBrush" Color="#FFE2574A" />
-
-  <!-- everything accent-tinted must DynamicResource these so switching is live -->
-  <DynamicResourceExtension ResourceKey="AccentColor" x:Key="AccentColorRef" />
-  <DynamicResourceExtension ResourceKey="AccentDimColor" x:Key="AccentDimColorRef" />
-  <DynamicResourceExtension ResourceKey="AccentGlowColor" x:Key="AccentGlowColorRef" />
-
-  <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}" />
-  <SolidColorBrush x:Key="AccentDimBrush" Color="{DynamicResource AccentDimColor}" />
-  <SolidColorBrush x:Key="AccentGlowBrush" Color="{DynamicResource AccentGlowColor}" />
-  <LinearGradientBrush x:Key="TopbarGradient" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="#00000000" Offset="0" />
-    <GradientStop Color="{DynamicResource AccentGlowColor}" Offset="0.45" />
-    <GradientStop Color="#00000000" Offset="1" />
-  </LinearGradientBrush>
-
-  <DropShadowEffect x:Key="AccentGlowEffect" Color="{DynamicResource AccentColor}"
-                    BlurRadius="16" ShadowDepth="0" Opacity="0.55" />
-  <DropShadowEffect x:Key="AccentGlowStrongEffect" Color="{DynamicResource AccentColor}"
-                    BlurRadius="22" ShadowDepth="0" Opacity="0.8" />
 
   <!-- dotted blueprint grid for the panel-layout canvas (static pen; can't dynamic-bind) -->
   <DrawingBrush x:Key="PanelGridBrush" TileMode="Tile" ViewportUnits="Absolute" Viewport="0,0,24,24">
@@ -90,8 +74,8 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentDimBrush}" />
-              <Setter TargetName="bd" Property="Effect" Value="{StaticResource AccentGlowEffect}" />
+              <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentDimBrush}" />
+              <Setter TargetName="bd" Property="Effect" Value="{DynamicResource AccentGlowEffect}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="bd" Property="Effect" Value="{x:Null}" />
@@ -128,7 +112,7 @@
 
   <!-- accent-filled call-to-action (Apply profile) -->
   <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="#FF0B0D11" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="BorderBrush" Value="Transparent" />
@@ -145,7 +129,7 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="bd" Property="Effect" Value="{StaticResource AccentGlowStrongEffect}" />
+              <Setter TargetName="bd" Property="Effect" Value="{DynamicResource AccentGlowStrongEffect}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="bd" Property="Effect" Value="{x:Null}" />
@@ -200,7 +184,7 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="bd" Property="Opacity" Value="0.82" />
-              <Setter TargetName="bd" Property="Effect" Value="{StaticResource AccentGlowEffect}" />
+              <Setter TargetName="bd" Property="Effect" Value="{DynamicResource AccentGlowEffect}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="bd" Property="Effect" Value="{x:Null}" />
@@ -259,16 +243,16 @@
                     CornerRadius="7" Padding="{TemplateBinding Padding}" />
             <!-- accent pill underline, fades in when checked -->
             <Border x:Name="pill" Height="3" CornerRadius="1.5" VerticalAlignment="Bottom"
-                    Margin="8,0,8,2" Background="{StaticResource AccentBrush}" Opacity="0" />
+                    Margin="8,0,8,2" Background="{DynamicResource AccentBrush}" Opacity="0" />
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                               Margin="0,-3,0,0" />
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentDimBrush}" />
+              <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentDimBrush}" />
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+              <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
               <Setter TargetName="pill" Property="Opacity" Value="1" />
               <Trigger.EnterActions>
                 <BeginStoryboard>
@@ -304,8 +288,8 @@
     <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="7,5" />
-    <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
-    <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="TextBox">
@@ -317,8 +301,8 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-              <Setter TargetName="bd" Property="Effect" Value="{StaticResource AccentGlowEffect}" />
+              <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+              <Setter TargetName="bd" Property="Effect" Value="{DynamicResource AccentGlowEffect}" />
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="bd" Property="BorderBrush" Value="#FF3A4354" />
@@ -346,11 +330,11 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
-              <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentDimBrush}" />
+              <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentDimBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-              <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentGlowBrush}" />
-              <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+              <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentGlowBrush}" />
+              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45" />
@@ -411,11 +395,11 @@
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+              <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             </Trigger>
             <Trigger Property="IsDropDownOpen" Value="True">
-              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-              <Setter TargetName="bd" Property="Effect" Value="{StaticResource AccentGlowEffect}" />
+              <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+              <Setter TargetName="bd" Property="Effect" Value="{DynamicResource AccentGlowEffect}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45" />
@@ -446,10 +430,10 @@
                       <Border x:Name="thumb" Background="#FF39404F" CornerRadius="4" Margin="1" />
                       <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                          <Setter TargetName="thumb" Property="Background" Value="{StaticResource AccentDimBrush}" />
+                          <Setter TargetName="thumb" Property="Background" Value="{DynamicResource AccentDimBrush}" />
                         </Trigger>
                         <Trigger Property="IsDragging" Value="True">
-                          <Setter TargetName="thumb" Property="Background" Value="{StaticResource AccentBrush}" />
+                          <Setter TargetName="thumb" Property="Background" Value="{DynamicResource AccentBrush}" />
                         </Trigger>
                       </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -525,7 +509,7 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
-              <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentDimBrush}" />
+              <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentDimBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45" />
@@ -597,10 +581,10 @@
 
   <!-- hub → accent -->
   <Style x:Key="ChipHubDot" TargetType="Ellipse" BasedOn="{StaticResource HudChipDot}">
-    <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style x:Key="ChipHubLabel" TargetType="TextBlock" BasedOn="{StaticResource HudChipLabel}">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <!-- ===================== checkbox (settings dialog) ===================== -->
@@ -631,8 +615,8 @@
           </StackPanel>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
-              <Setter TargetName="box" Property="Background" Value="{StaticResource AccentBrush}" />
-              <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+              <Setter TargetName="box" Property="Background" Value="{DynamicResource AccentBrush}" />
+              <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
               <Setter TargetName="check" Property="Opacity" Value="1" />
               <Trigger.EnterActions>
                 <BeginStoryboard>
@@ -656,7 +640,7 @@
               </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+              <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45" />
@@ -686,7 +670,7 @@
     <Style.Triggers>
       <DataTrigger Binding="{Binding IsBusy}" Value="True">
         <Setter Property="StrokeThickness" Value="2" />
-        <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
         <DataTrigger.EnterActions>
           <BeginStoryboard>
             <Storyboard RepeatBehavior="Forever"

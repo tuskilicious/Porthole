@@ -164,17 +164,21 @@ internal static class Native
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct USB_NODE_INFORMATION
+    public unsafe struct USB_NODE_INFORMATION
     {
         public uint NodeType;      // USB_HUB_NODE: UsbHub = 0, UsbMIParent = 1
-        public uint MiParentNumberOfInterfaces; // union member (hub info overlaps here)
+
+        // The union (HubInformation | MiParentInformation) starts right here at
+        // offset 4 — the hub descriptor OVERLAPS it; there is no extra 4-byte field.
+        // (A phantom ULONG here used to shift every descriptor read by 4 bytes, so
+        // bNumberOfPorts read a zero byte and every hub looked port-less.)
         public byte HubDescriptor_bDescriptorLength;
         public byte HubDescriptor_bDescriptorType;
         public byte HubDescriptor_bNumberOfPorts;
         public ushort HubDescriptor_wHubCharacteristics;
         public byte HubDescriptor_bPowerOnToPowerGood;
         public byte HubDescriptor_bHubControlCurrent;
-        public unsafe fixed byte HubDescriptor_bRemoveAndPowerMask[64];
+        public fixed byte HubDescriptor_bRemoveAndPowerMask[64];
         public byte HubIsBusPowered;
     }
 

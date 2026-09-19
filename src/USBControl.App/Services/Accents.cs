@@ -1,12 +1,18 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 
 namespace USBControl.App.Services;
 
 /// <summary>
 /// The neon accent catalog. Each palette recolors the whole UI (brand, focus, hover
 /// glow, selection) while green/amber/red stay reserved for device state. Switching
-/// swaps the "AccentBrushes" ResourceDictionary in Application.Resources live.
+/// replaces the "accent" ResourceDictionary with freshly built, frozen brushes.
+///
+/// Consumers must reference the accent resources with DynamicResource AT THE SETTER
+/// level ({DynamicResource AccentBrush}) — never inside a Freezable (GradientStop,
+/// SolidColorBrush, Effect), which WPF forbids and reports as a
+/// "System.Windows.Media.GradientStop Color" parse error.
 /// </summary>
 public static class Accents
 {
@@ -29,32 +35,62 @@ public static class Accents
         var p = Resolve(name);
         var dict = new ResourceDictionary();
 
-        void Put(string key, Color c) => dict[key] = new SolidColorBrush(c);
+        void Brush(string key, Color c)
+        {
+            var b = new SolidColorBrush(c);
+            b.Freeze();
+            dict[key] = b;
+        }
 
-        Put("AccentColor", p.Base);
-        Put("AccentDimColor", p.Dim);
-        Put("AccentGlowColor", p.Glow);
+        // Raw colors for anything Color-typed (storyboards etc.).
+        dict["AccentColor"] = p.Base;
+        dict["AccentDimColor"] = p.Dim;
+        dict["AccentGlowColor"] = p.Glow;
 
-        var accent = (SolidColorBrush)dict["AccentColor"];
-        accent.Freeze();
-        var dim = (SolidColorBrush)dict["AccentDimColor"];
-        dim.Freeze();
-        var glow = (SolidColorBrush)dict["AccentGlowColor"];
-        glow.Freeze();
+        Brush("AccentBrush", p.Base);
+        Brush("AccentDimBrush", p.Dim);
+        Brush("AccentGlowBrush", p.Glow);
 
-        // The wordmark gradient: accent fades into the panel background.
+        // The wordmark/top-bar gradient: accent glow fading to transparent.
         var grad = new LinearGradientBrush
         {
             StartPoint = new Point(0, 0),
             EndPoint = new Point(1, 0),
         };
-        grad.GradientStops.Add(new GradientStop(p.Base, 1.0));
-        grad.GradientStops.Add(new GradientStop(p.Glow, 0.0));
+        grad.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.0));
+        grad.GradientStops.Add(new GradientStop(p.Glow, 0.45));
+        grad.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1.0));
         grad.Freeze();
-        dict["BrandGradient"] = grad;
+        dict["TopbarGradient"] = grad;
+
+        var brand = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(1, 0),
+        };
+        brand.GradientStops.Add(new GradientStop(p.Base, 1.0));
+        brand.GradientStops.Add(new GradientStop(p.Glow, 0.0));
+        brand.Freeze();
+        dict["BrandGradient"] = brand;
+
+        Effect Glow(Color c, double radius, double opacity)
+        {
+            var e = new DropShadowEffect
+            {
+                Color = c,
+                BlurRadius = radius,
+                ShadowDepth = 0,
+                Opacity = opacity,
+            };
+            e.Freeze();
+            return e;
+        }
+
+        dict["AccentGlowEffect"] = Glow(p.Base, 16, 0.55);
+        dict["AccentGlowStrongEffect"] = Glow(p.Base, 22, 0.8);
 
         var res = Application.Current.Resources.MergedDictionaries;
-        var existing = res.FirstOrDefault(d => d.Contains("AccentColor") && d.Source?.OriginalString.Contains("Accent") == true);
+        var existing = res.FirstOrDefault(d => d.Contains("AccentBrush"));
         if (existing is not null)
             res.Remove(existing);
         res.Add(dict);
