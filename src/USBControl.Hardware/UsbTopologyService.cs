@@ -99,7 +99,13 @@ public sealed class UsbTopologyService : ITopologyService
                             {
                                 var childHub = GetChildHubName(hub, port);
                                 if (!string.IsNullOrEmpty(childHub))
-                                    queue.Enqueue(childHub);
+                                {
+                                    // Child names are bare symbolic links too — CreateFileW
+                                    // needs the \\?\ device-path prefix, same as root hubs.
+                                    queue.Enqueue(childHub.StartsWith("\\\\?\\", StringComparison.Ordinal)
+                                        ? childHub
+                                        : "\\\\?\\" + childHub);
+                                }
                             }
                             catch
                             {

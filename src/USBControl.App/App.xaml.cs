@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using USBControl.App.Services;
 using USBControl.Core;
@@ -21,6 +22,20 @@ public partial class App : Application
 
         DispatcherUnhandledException += (_, args) =>
         {
+            try
+            {
+                var log = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "USBControl", "crash.log");
+                File.AppendAllText(log,
+                    $"[{DateTime.Now:HH:mm:ss.fff}] {args.Exception.GetType().FullName}: {args.Exception.Message}\n" +
+                    args.Exception.StackTrace + "\n---\n");
+            }
+            catch
+            {
+                // never let logging itself take the app down
+            }
+
             MessageBox.Show(args.Exception.Message, "USB Control — unexpected error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
