@@ -55,6 +55,23 @@ public static class Accents
         Brush("AccentSoftBrush", Color.FromArgb(0x33, p.Base.R, p.Base.G, p.Base.B));
         Brush("AccentLineBrush", Color.FromArgb(0x66, p.Base.R, p.Base.G, p.Base.B));
 
+        // 8% tint for the icon-well circle.
+        Brush("AccentTintBrush", Color.FromArgb(0x14, p.Base.R, p.Base.G, p.Base.B));
+
+        // A very faint (5%) accent bloom behind the top-left of the window, so the
+        // background is not dead flat. Center sits under the content area, not the toolbar.
+        var backdrop = new RadialGradientBrush
+        {
+            Center = new Point(0.1, 0.12),
+            GradientOrigin = new Point(0.1, 0.12),
+            RadiusX = 0.75,
+            RadiusY = 0.95,
+        };
+        backdrop.GradientStops.Add(new GradientStop(Color.FromArgb(0x0D, p.Base.R, p.Base.G, p.Base.B), 0.0));
+        backdrop.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, p.Base.R, p.Base.G, p.Base.B), 1.0));
+        backdrop.Freeze();
+        dict["AccentBackdropBrush"] = backdrop;
+
         // Tile borders: hover is a quiet 35% hairline, selection a firm 70% ring.
         Brush("AccentHoverBrush", Color.FromArgb(0x59, p.Base.R, p.Base.G, p.Base.B));
         Brush("AccentSelectBrush", Color.FromArgb(0xB3, p.Base.R, p.Base.G, p.Base.B));

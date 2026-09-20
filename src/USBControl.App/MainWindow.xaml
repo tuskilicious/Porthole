@@ -9,6 +9,10 @@
   <!-- All colors, sizes, fonts and radii come from Themes/Theme.xaml; the port tile and
        status chip live in Themes/Tiles.xaml; control styles in Themes/Dark.xaml. -->
 
+  <Grid>
+  <!-- a very faint accent bloom behind the top-left, so the window is not dead flat -->
+  <Rectangle Fill="{DynamicResource AccentBackdropBrush}" IsHitTestVisible="False" />
+
   <DockPanel>
 
     <!-- ===================== toolbar (56px) ===================== -->
@@ -79,6 +83,32 @@
       </DockPanel>
     </Border>
 
+    <!-- ===================== summary band ===================== -->
+    <Border DockPanel.Dock="Top" Padding="{StaticResource StatBandPadding}"
+            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal">
+        <StackPanel Margin="0,0,32,0" MinWidth="72">
+          <TextBlock Text="{Binding Controller.DeviceCount}" Style="{StaticResource StatValue}" />
+          <TextBlock Text="D&#x200A;E&#x200A;V&#x200A;I&#x200A;C&#x200A;E&#x200A;S" Style="{StaticResource StatLabel}" />
+        </StackPanel>
+        <Border Width="1" Height="36" Background="{StaticResource BorderBrush}" VerticalAlignment="Center" />
+        <StackPanel Margin="32,0,32,0" MinWidth="72">
+          <TextBlock Text="{Binding Controller.EnabledCount}" Style="{StaticResource StatValue}" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock Text="E&#x200A;N&#x200A;A&#x200A;B&#x200A;L&#x200A;E&#x200A;D" Style="{StaticResource StatLabel}" />
+        </StackPanel>
+        <Border Width="1" Height="36" Background="{StaticResource BorderBrush}" VerticalAlignment="Center" />
+        <StackPanel Margin="32,0,32,0" MinWidth="72">
+          <TextBlock Text="{Binding Controller.DisabledCount}" Style="{StaticResource StatValue}" />
+          <TextBlock Text="D&#x200A;I&#x200A;S&#x200A;A&#x200A;B&#x200A;L&#x200A;E&#x200A;D" Style="{StaticResource StatLabel}" />
+        </StackPanel>
+        <Border Width="1" Height="36" Background="{StaticResource BorderBrush}" VerticalAlignment="Center" />
+        <StackPanel Margin="32,0,32,0" MinWidth="72">
+          <TextBlock Text="{Binding Controller.HubCount}" Style="{StaticResource StatValue}" />
+          <TextBlock Text="H&#x200A;U&#x200A;B&#x200A;S" Style="{StaticResource StatLabel}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <!-- ===================== status bar (32px) ===================== -->
     <Border DockPanel.Dock="Bottom" Height="{StaticResource StatusbarHeight}"
             Background="{StaticResource SurfaceBrush}" Padding="{StaticResource StatusbarPadding}"
@@ -115,12 +145,22 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <StackPanel Margin="{StaticResource SectionGap}">
-                  <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                  <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                     <Border Style="{StaticResource AccentBar}" />
-                    <TextBlock Text="{Binding HubHeader}" Style="{StaticResource Heading}"
+                    <TextBlock Grid.Column="1" Text="{Binding HubHeader}" Style="{StaticResource Heading}"
                                ToolTip="{Binding DisplayName}" Margin="10,0,0,0" />
-                    <TextBlock Text="{Binding UsageText}" Style="{StaticResource MutedText}" Margin="12,0,0,0" />
-                  </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding UsageText}" Style="{StaticResource MutedText}"
+                               Margin="12,0,0,0" />
+                    <!-- hairline rule running to the right edge -->
+                    <Border Grid.Column="3" Height="1" Background="{StaticResource BorderBrush}"
+                            VerticalAlignment="Center" Margin="16,0,0,0" />
+                  </Grid>
                   <ItemsControl ItemsSource="{Binding Ports}" Focusable="False">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
@@ -141,18 +181,21 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
 
-          <!-- empty state -->
-          <StackPanel HorizontalAlignment="Center" Margin="0,64,0,0"
+          <!-- no devices at all -->
+          <StackPanel HorizontalAlignment="Center" Margin="0,80,0,0"
                       Visibility="{Binding HasNoHubs, Converter={StaticResource BoolToVis}}">
-            <Path Data="{StaticResource IconEmpty}" Style="{StaticResource IconPath}"
-                  Stroke="{StaticResource TextMutedBrush}" Width="40" Height="40"
-                  HorizontalAlignment="Center" />
-            <TextBlock Text="No USB ports found yet" FontSize="{StaticResource FontSizeTitle}"
-                       FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
-                       HorizontalAlignment="Center" Margin="0,12,0,0" />
-            <TextBlock Text="The app runs elevated (Device Manager rights): accept the prompt, then hit Refresh."
-                       Style="{StaticResource FieldLabel}" HorizontalAlignment="Center"
-                       Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" />
+            <Grid Width="{StaticResource EmptyStateRingSize}" Height="{StaticResource EmptyStateRingSize}"
+                  HorizontalAlignment="Center">
+              <Ellipse Stroke="{StaticResource BorderStrongBrush}" StrokeThickness="1.5" StrokeDashArray="3 4" />
+              <Ellipse Margin="14" Fill="{DynamicResource AccentTintBrush}" />
+              <Path Data="{StaticResource IconEmpty}" Style="{StaticResource IconPath}"
+                    Stroke="{StaticResource TextMutedBrush}" StrokeThickness="1.4"
+                    Width="{StaticResource EmptyStateGlyphSize}" Height="{StaticResource EmptyStateGlyphSize}"
+                    Opacity="0.7" />
+            </Grid>
+            <TextBlock Text="No devices found - try Refresh" FontSize="{StaticResource FontSizeTitle}"
+                       FontWeight="SemiBold" Foreground="{StaticResource TextDimBrush}"
+                       HorizontalAlignment="Center" Margin="0,20,0,0" />
           </StackPanel>
         </StackPanel>
       </ScrollViewer>
@@ -229,19 +272,15 @@
             <TextBlock Text="PORT EDITOR" Style="{StaticResource Heading}" Margin="10,0,0,0" />
           </DockPanel>
 
-          <!-- nothing selected -->
-          <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="32,0,32,64"
+          <!-- nothing selected: a large, faint icon and a one-line hint -->
+          <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16,0,16,64"
                       Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
-            <Border Width="{StaticResource IconWellSize}" Height="{StaticResource IconWellSize}"
-                    CornerRadius="{StaticResource RadiusControl}" Background="{StaticResource RaisedBrush}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
-              <Path Style="{StaticResource IconPath}" Data="{StaticResource IconEmpty}"
-                    Stroke="{StaticResource TextMutedBrush}" Width="{StaticResource TypeGlyphSize}"
-                    Height="{StaticResource TypeGlyphSize}" />
-            </Border>
+            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconEmpty}"
+                  Stroke="{StaticResource TextDimBrush}" StrokeThickness="1.3" Opacity="0.28"
+                  Width="{StaticResource EmptyStateGlyphSize}" Height="{StaticResource EmptyStateGlyphSize}"
+                  HorizontalAlignment="Center" />
             <TextBlock Text="Select a port to edit its label, name and photo" Margin="0,16,0,0"
-                       Style="{StaticResource FieldLabel}" FontSize="{StaticResource FontSizeBody}"
-                       TextWrapping="Wrap" TextAlignment="Center" />
+                       Style="{StaticResource FieldLabel}" TextAlignment="Center" TextWrapping="Wrap" />
           </StackPanel>
 
           <!-- selected port -->
@@ -255,26 +294,13 @@
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Width="{StaticResource IconWellSize}" Height="{StaticResource IconWellSize}"
-                        CornerRadius="{StaticResource RadiusControl}" Background="{StaticResource RaisedBrush}"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        VerticalAlignment="Top" Margin="0,0,12,0">
-                  <Grid>
-                    <Path Style="{StaticResource TileGlyph}"
-                          Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}" />
-                    <Border CornerRadius="{StaticResource RadiusControl}"
-                            Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}">
-                      <Border.Background>
-                        <ImageBrush ImageSource="{Binding PhotoPath, Converter={StaticResource PhotoConverter}}"
-                                    Stretch="UniformToFill" />
-                      </Border.Background>
-                    </Border>
-                  </Grid>
-                </Border>
+                <ContentControl ContentTemplate="{StaticResource IconWell}" Content="{Binding}"
+                                VerticalAlignment="Top" Margin="0,0,12,0" Focusable="False" />
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                   <TextBlock Text="{Binding DeviceName}" FontSize="{StaticResource FontSizeName}"
                              FontWeight="SemiBold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                             LineHeight="20" LineStackingStrategy="BlockLineHeight" MaxHeight="40"
+                             LineHeight="{StaticResource NameLineHeight}" LineStackingStrategy="BlockLineHeight"
+                             MaxHeight="{StaticResource NameMaxHeight}"
                              Foreground="{StaticResource TextBrush}" />
                   <ContentControl Margin="0,8,0,0" HorizontalAlignment="Left" Content="{Binding}"
                                   ContentTemplate="{StaticResource StatusChip}"
@@ -365,4 +391,5 @@
       </Border>
     </Grid>
   </DockPanel>
+  </Grid>
 </Window>

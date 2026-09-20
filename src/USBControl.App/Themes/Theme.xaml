@@ -45,6 +45,14 @@
   <Color x:Key="BadSoftColor">#24F0506E</Color>
   <Color x:Key="NeutralSoftColor">#18FFFFFF</Color>
 
+  <!-- tile depth: a faint vertical gradient (raised a touch on hover), a 6% top highlight, soft shadow -->
+  <Color x:Key="TileTopColor">#FF161A20</Color>
+  <Color x:Key="TileBottomColor">#FF12151A</Color>
+  <Color x:Key="TileTopHoverColor">#FF1D222A</Color>
+  <Color x:Key="TileBottomHoverColor">#FF171B21</Color>
+  <Color x:Key="TileHighlightColor">#0FFFFFFF</Color>
+  <Color x:Key="ShadowColor">#FF000000</Color>
+
   <!-- toggle switch: on = live accent, off = muted gray -->
   <Color x:Key="ToggleOffColor">#FF3A414C</Color>
 
@@ -71,6 +79,13 @@
 
   <SolidColorBrush x:Key="ToggleOffBrush" Color="{StaticResource ToggleOffColor}" />
 
+  <!-- 1px inner highlight along the top edge of a tile, fading out at both ends -->
+  <LinearGradientBrush x:Key="TileHighlightBrush" StartPoint="0,0" EndPoint="1,0">
+    <GradientStop Color="#00FFFFFF" Offset="0" />
+    <GradientStop Color="{StaticResource TileHighlightColor}" Offset="0.5" />
+    <GradientStop Color="#00FFFFFF" Offset="1" />
+  </LinearGradientBrush>
+
   <!-- ===================== typography ===================== -->
 
   <FontFamily x:Key="FontBody">Segoe UI Variable, Segoe UI</FontFamily>
@@ -78,14 +93,19 @@
   <FontFamily x:Key="FontMono">Cascadia Mono, Consolas</FontFamily>
 
   <sys:Double x:Key="FontSizeTitle">15</sys:Double>
-  <sys:Double x:Key="FontSizeName">15</sys:Double>
+  <sys:Double x:Key="FontSizeName">16</sys:Double>
   <sys:Double x:Key="FontSizeBody">13</sys:Double>
   <sys:Double x:Key="FontSizeControl">13</sys:Double>
   <sys:Double x:Key="FontSizeSecondary">12</sys:Double>
   <sys:Double x:Key="FontSizeMeta">12</sys:Double>
   <sys:Double x:Key="FontSizeMicro">11</sys:Double>
   <sys:Double x:Key="FontSizeChip">11</sys:Double>
-  <sys:Double x:Key="FontSizeHeading">14</sys:Double>
+  <sys:Double x:Key="FontSizeHeading">13</sys:Double>
+  <sys:Double x:Key="FontSizeStat">24</sys:Double>
+  <sys:Double x:Key="FontSizeStatLabel">10</sys:Double>
+  <!-- tight two-line device name: 19px lines, capped at two -->
+  <sys:Double x:Key="NameLineHeight">19</sys:Double>
+  <sys:Double x:Key="NameMaxHeight">38</sys:Double>
 
   <!-- ===================== spacing scale (4 · 8 · 12 · 16 · 24 · 32) ===================== -->
 
@@ -111,6 +131,7 @@
   <Thickness x:Key="TooltipPadding">10,6</Thickness>
   <Thickness x:Key="ChipPadding">8,3</Thickness>
   <Thickness x:Key="SectionGap">0,0,0,24</Thickness>
+  <Thickness x:Key="StatBandPadding">24,14</Thickness>
 
   <!-- ===================== corner radii: 10 tiles, 8 controls ===================== -->
 
@@ -140,6 +161,8 @@
   <sys:Double x:Key="PanelCanvasHeight">900</sys:Double>
 
   <sys:Double x:Key="IconWellSize">48</sys:Double>
+  <sys:Double x:Key="EmptyStateGlyphSize">64</sys:Double>
+  <sys:Double x:Key="EmptyStateRingSize">120</sys:Double>
   <sys:Double x:Key="TypeGlyphSize">24</sys:Double>
   <sys:Double x:Key="ToolbarGlyphSize">18</sys:Double>
   <sys:Double x:Key="IconButtonSize">36</sys:Double>
@@ -166,8 +189,22 @@
 
   <!-- motion -->
   <Duration x:Key="MotionFast">0:0:0.12</Duration>
-  <sys:Double x:Key="DisabledOpacity">0.55</sys:Double>
-  <sys:Double x:Key="HoverScale">1.012</sys:Double>
+  <Duration x:Key="MotionBase">0:0:0.15</Duration>
+  <Duration x:Key="MotionSlow">0:0:0.18</Duration>
+  <Duration x:Key="MotionPulse">0:0:1</Duration>
+  <CubicEase x:Key="EaseOut" EasingMode="EaseOut" />
+  <SineEase x:Key="EaseInOut" EasingMode="EaseInOut" />
+  <sys:Double x:Key="DisabledOpacity">0.5</sys:Double>
+  <sys:Double x:Key="IntroScaleFrom">0.94</sys:Double>
+
+  <!-- tile shadow at rest (0 2 8, 35% black) and when lifted on hover -->
+  <sys:Double x:Key="TileLift">-2</sys:Double>
+  <sys:Double x:Key="TileShadowBlur">8</sys:Double>
+  <sys:Double x:Key="TileShadowDepth">2</sys:Double>
+  <sys:Double x:Key="TileShadowOpacity">0.35</sys:Double>
+  <sys:Double x:Key="TileShadowBlurHover">18</sys:Double>
+  <sys:Double x:Key="TileShadowDepthHover">6</sys:Double>
+  <sys:Double x:Key="TileShadowOpacityHover">0.55</sys:Double>
 
   <!-- dotted blueprint grid behind the panel-layout canvas -->
   <DrawingBrush x:Key="PanelGridBrush" TileMode="Tile" ViewportUnits="Absolute" Viewport="0,0,24,24"

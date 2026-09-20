@@ -32,6 +32,19 @@ public sealed partial class AppController : ObservableObject, IDisposable
     [ObservableProperty]
     private string? activeProfile;
 
+    // Summary band: counted from the full snapshot (not the filtered view).
+    [ObservableProperty]
+    private int deviceCount;
+
+    [ObservableProperty]
+    private int enabledCount;
+
+    [ObservableProperty]
+    private int disabledCount;
+
+    [ObservableProperty]
+    private int hubCount;
+
     /// <summary>Identity of the device whose power change is in flight (its tile shows the Busy chip).</summary>
     [ObservableProperty]
     private string? busyDeviceIdentity;
@@ -106,6 +119,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
                 var devices = _snapshot.AllPorts.Count(p => p.Device is not null);
                 var disabled = _snapshot.AllPorts.Count(p => p.State == PortState.Disabled);
                 StatusText = $"Updated {DateTime.Now:HH:mm:ss} — {devices} devices, {disabled} disabled";
+                DeviceCount = devices;
+                DisabledCount = disabled;
+                EnabledCount = devices - disabled;
+                HubCount = _snapshot.Hubs.Count;
 
                 if (firstRun && !string.IsNullOrEmpty(Settings.LastProfile))
                 {
@@ -131,25 +148,35 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
     private void MergeStore(TopologySnapshot snapshot) => TopologyMerger.Merge(snapshot, Store);
 
+    // "port|identity" of every device on screen after the last rebuild; a tile whose device is
+    // not in here is new and plays the appear animation.
+    private HashSet<string> _shownDevices = new();
+
     private void RebuildCollections()
     {
         RunOnUi(() =>
         {
             Hubs.Clear();
             PanelPorts.Clear();
+            var shownNow = new HashSet<string>();
             var hubIndex = 0;
             foreach (var hub in _snapshot.Hubs)
             {
                 var vm = new HubGroupViewModel(this, hub, hubIndex++);
                 foreach (var port in hub.Ports.Where(ShouldShow))
                 {
-                    var portVm = new PortViewModel(this, port);
+                    var deviceKey = port.Device is null ? null : $"{port.PortKey}|{port.Device.Identity}";
+                    if (deviceKey is not null)
+                        shownNow.Add(deviceKey);
+                    var portVm = new PortViewModel(this, port,
+                        appeared: deviceKey is not null && !_shownDevices.Contains(deviceKey));
                     vm.Ports.Add(portVm);
                     PanelPorts.Add(portVm);
                 }
                 Hubs.Add(vm);
             }
 
+            _shownDevices = shownNow;
             OnPropertyChanged(nameof(Hubs));
 
             if (_lastToggledIdentity is not null)
