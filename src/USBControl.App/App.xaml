@@ -5,7 +5,12 @@
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
+        <!-- Order matters: tokens first, then icons, control styles, and the tile templates
+             (which use all three). Accent brushes are merged in by Accents.Apply at startup. -->
+        <ResourceDictionary Source="Themes/Theme.xaml" />
+        <ResourceDictionary Source="Themes/Icons.xaml" />
         <ResourceDictionary Source="Themes/Dark.xaml" />
+        <ResourceDictionary Source="Themes/Tiles.xaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

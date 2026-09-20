@@ -29,4 +29,30 @@
     <ProjectReference Include="..\USBControl.Hardware\USBControl.Hardware.csproj" />
   </ItemGroup>
 
+  <!-- Demo mode (the "demo" command line flag) loads USBControl.Testing.dll from the
+       app directory at runtime (a compile-time reference is impossible: Testing
+       references App for TestingRig). Publish builds Testing first (separate dotnet
+       process, so the reference cycle stays broken), then copies the dll next to the
+       EXE. Plain builds copy it whenever it exists (any solution/test build produces it). -->
+  <Target Name="BuildTestingForDemo" BeforeTargets="Publish">
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\USBControl.Testing\USBControl.Testing.csproj&quot; -c $(Configuration) --nologo -v q" />
+  </Target>
+  <Target Name="CopyTestingForDemo" AfterTargets="Build;Publish">
+    <PropertyGroup>
+      <TestingBin>$(MSBuildThisFileDirectory)..\USBControl.Testing\bin\$(Configuration)\$(TargetFramework)</TestingBin>
+    </PropertyGroup>
+    <!-- Exists-gated: when Testing has not produced its dll yet (e.g. App is being built
+         as a nested reference of a Testing build), the copy is a silent no-op instead of
+         failing the build with MSB3030. -->
+    <ItemGroup>
+      <_TestingForDemo Include="$(TestingBin)\USBControl.Testing.dll"
+                       Condition="Exists('$(TestingBin)\USBControl.Testing.dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_TestingForDemo)" DestinationFolder="$(OutDir)"
+          Condition="'@(_TestingForDemo)' != ''" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_TestingForDemo)" DestinationFolder="$(PublishDir)"
+          Condition="'$(PublishDir)' != '' And '@(_TestingForDemo)' != '' And '$(OutDir)' != '$(PublishDir)'"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DarkTitleBar.Apply(this);
         var vm = new MainWindowViewModel(App.Controller)
         {
             ProfileNamePrompt = name => Prompt.Show(this, name, "Profile name", $"My setup {DateTime.Now:yyyy-MM-dd HH:mm}"),

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -20,15 +21,22 @@ public sealed class HubGroupViewModel
     public AppController Controller { get; }
     public ObservableCollection<PortViewModel> Ports { get; } = new();
 
+    /// <summary>Zero-based position of this hub in the snapshot (drives the "HUB n" header).</summary>
+    public int HubIndex { get; }
+
     public string DisplayName => Entry.DisplayName;
 
-    /// <summary>Visible port count for the HUD-style hub header.</summary>
-    public int PortCount => Ports.Count;
+    /// <summary>Header text: "HUB 3", hair-spaced to fake the letter-spacing WPF text lacks.</summary>
+    public string HubHeader => string.Join("\u200A", $"HUB {HubIndex + 1}".ToCharArray());
 
-    public HubGroupViewModel(AppController controller, HubGroup entry)
+    /// <summary>The one count under a hub header: "4 of 6 in use".</summary>
+    public string UsageText => $"{Ports.Count(p => !p.IsEmpty)} of {Ports.Count} in use";
+
+    public HubGroupViewModel(AppController controller, HubGroup entry, int hubIndex = 0)
     {
         Controller = controller;
         Entry = entry;
+        HubIndex = hubIndex;
     }
 }
 
@@ -54,6 +62,11 @@ public sealed class PortViewModel : INotifyPropertyChanged
             _ => _ = Controller.ToggleAsync(Entry, Entry.State == PortState.Disabled),
             _ => Entry.Device is not null);
         OpenEditorCommand = new RelayCommand(_ => EditorRequested?.Invoke(this));
+        CopyDetailsCommand = new RelayCommand(_ => CopyDetails(), _ => Entry.Device is not null);
+
+        // Weak subscription: tiles are rebuilt on every refresh and must not leak.
+        PropertyChangedEventManager.AddHandler(Controller, OnControllerChanged,
+            nameof(AppController.BusyDeviceIdentity));
         PickPhotoCommand = new RelayCommand(_ => PickPhoto());
         ClearPhotoCommand = new RelayCommand(_ => Controller.ClearDevicePhoto(Entry),
             _ => HasPhoto);
@@ -63,6 +76,31 @@ public sealed class PortViewModel : INotifyPropertyChanged
     public ICommand OpenEditorCommand { get; }
     public ICommand PickPhotoCommand { get; }
     public ICommand ClearPhotoCommand { get; }
+    public ICommand CopyDetailsCommand { get; }
+
+    /// <summary>Demo mode only: a HardwareId fragment whose device is shown permanently busy.</summary>
+    public static string? DemoBusyMatch { get; set; }
+
+    private bool _isSelected;
+
+    /// <summary>True while this tile is the one open in the editor (drives the selection ring).</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private void OnControllerChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(StatusKind));
+        OnPropertyChanged(nameof(StateText));
+    }
 
     public UsbDeviceInfo? Device => Entry.Device;
 
@@ -86,74 +124,186 @@ public sealed class PortViewModel : INotifyPropertyChanged
         }
     }
 
-    public string DeviceName => Entry.Device?.DisplayName switch
-    {
-        null => "Empty",
-        "" => "Unknown device",
-        var n => n,
-    };
-
-    public string Subtitle
+    /// <summary>
+    /// What the tile shows as the device name: the user's name, else the OS product
+    /// name, else "Unknown device (VID:PID)" — never a raw USB\VID_... path.
+    /// </summary>
+    public string DeviceName
     {
         get
         {
-            if (Entry.Device is null)
-                return $"hub {Entry.HubKey} · port {Entry.PortNumber}";
-            var cls = string.IsNullOrEmpty(Entry.Device.ClassName) ? "" : $" · {Entry.Device.ClassName}";
-            return $"{Entry.Device.Identity}{cls}";
+            if (Entry.Device is null) return "Empty";
+            // "(XINPUT)" is the driver child's suffix, not part of the product name.
+            return Regex.Replace(DisplayDeviceName(Entry.Device), @"\s*\(XINPUT\)$", "");
         }
     }
 
-    public string StateText => Entry.State switch
+    /// <summary>The untrimmed name, for the tile tooltip.</summary>
+    public string DeviceNameFull => Entry.Device is null ? "Empty" : DisplayDeviceName(Entry.Device);
+
+    private static string DisplayDeviceName(UsbDeviceInfo d)
     {
-        PortState.Connected => "Connected",
-        PortState.Disabled => "Disabled",
-        PortState.Problem => "Problem",
-        PortState.Hub => "Hub",
+        var name = d.ChildDisplayName ?? d.DisplayName;
+        return string.IsNullOrWhiteSpace(name) || LooksLikeUsbPath(name) ? FallbackDeviceName(d) : name;
+    }
+
+    /// <summary>True for OS instance paths such as "USB\VID_1A34&amp;PID_F5B2\5&amp;2A1B" that leaked in as a name.</summary>
+    private static bool LooksLikeUsbPath(string name) =>
+        name.Contains('\\') || (name.Contains("VID_", StringComparison.OrdinalIgnoreCase)
+                                && name.Contains("PID_", StringComparison.OrdinalIgnoreCase));
+
+    private static string FallbackDeviceName(UsbDeviceInfo d) =>
+        TryVidPid(d, out var vidPid) ? $"Unknown device ({vidPid})" : "Unknown device";
+
+    private static bool TryVidPid(UsbDeviceInfo d, out string vidPid)
+    {
+        foreach (var source in new[] { d.HardwareId, d.Identity, d.InstanceId })
+        {
+            var m = Regex.Match(source ?? "", @"VID_([0-9A-Fa-f]{4})&PID_([0-9A-Fa-f]{4})");
+            if (m.Success)
+            {
+                vidPid = $"{m.Groups[1].Value}:{m.Groups[2].Value}".ToUpperInvariant();
+                return true;
+            }
+        }
+        vidPid = "";
+        return false;
+    }
+
+    public string StateText => StatusKind switch
+    {
+        "busy" => "Busy",
+        "error" => "Error",
+        "disabled" => "Disabled",
+        "hub" => "Hub",
+        "connected" => "Connected",
         _ => "Empty",
     };
 
-    public bool IsConnected => Entry.Device is not null && Entry.State != PortState.Hub;
+    /// <summary>connected / disabled / error / busy / hub / empty — drives the chip and tile styling.</summary>
+    public string StatusKind
+    {
+        get
+        {
+            if (Entry.Device is null) return "empty";
+            if (IsBusy) return "busy";
+            return Entry.State switch
+            {
+                PortState.Problem => "error",
+                PortState.Disabled => "disabled",
+                PortState.Hub => "hub",
+                _ => IsHub ? "hub" : "connected",
+            };
+        }
+    }
+
+    /// <summary>A power change is in flight for this device (or it is the demo's busy sample).</summary>
+    public bool IsBusy =>
+        Entry.Device is { } d
+        && ((Controller.BusyDeviceIdentity is { } id && id.Equals(d.Identity, StringComparison.OrdinalIgnoreCase))
+            || (DemoBusyMatch is { Length: > 0 } m && d.HardwareId.Contains(m, StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>Why the chip says Error (null for every other state, so no tooltip shows).</summary>
+    public string? StatusTooltip => StatusKind == "error"
+        ? "Windows reports a problem with this device (a Device Manager error state), so it may not work. "
+          + "Unplug and reconnect it, or switch it off and on again; if it keeps failing, check its driver in Device Manager."
+        : null;
+
     public bool IsEmpty => Entry.Device is null;
+    public bool HasDevice => Entry.Device is not null;
     public bool IsDisabled => Entry.State == PortState.Disabled;
     public bool IsProblem => Entry.State == PortState.Problem;
     public bool IsHub => Entry.Device?.IsHub ?? false;
-    public bool GameRelevant => Entry.Device?.GameRelevant ?? false;
 
-    /// <summary>Device-type glyph for the tile badge (photo takes precedence in the UI).</summary>
-    public string DeviceIconText => Entry.Device is null
-        ? "🔌"
-        : ClassifyIcon(Entry.Device);
+    /// <summary>Only real, non-hub devices get an on/off switch.</summary>
+    public bool HasToggle => Entry.Device is not null && !IsHub;
 
-    private static string ClassifyIcon(UsbDeviceInfo d)
+    /// <summary>Drives the tile's switch: on when a device is present and not disabled.</summary>
+    public bool IsOn => Entry.Device is not null && Entry.State != PortState.Disabled;
+
+    public string ToggleTooltip => IsOn
+        ? "On — click to disable (Device Manager power state)"
+        : "Off — click to enable (Device Manager power state)";
+
+    /// <summary>
+    /// Device type for the icon: controller, keyboard, mouse, headset, webcam, hub,
+    /// storage, unknown (or empty for a free port). Mouse/keyboard are HID-usage
+    /// specific and are checked before the broad game-device net so a "G512 RGB
+    /// Mechanical Keyboard" (HIDClass, game-relevant) doesn't get the controller glyph.
+    /// </summary>
+    public string DeviceKind => Entry.Device is null ? "empty" : ClassifyKind(Entry.Device);
+
+    private static string ClassifyKind(UsbDeviceInfo d)
     {
         if (d.IsHub)
-            return "🔗";
+            return "hub";
+
         var hw = d.HardwareId ?? "";
         var cls = d.ClassName ?? "";
+        var name = d.ChildDisplayName ?? d.DisplayName ?? "";
+        bool HwHas(string s) => hw.Contains(s, StringComparison.OrdinalIgnoreCase);
+        bool NameHas(string s) => name.Contains(s, StringComparison.OrdinalIgnoreCase);
 
-        if (cls is "HIDClass" or "HID")
+        // HID usage: pointing and keyboard devices (checked before controllers).
+        if (cls is "HIDClass" or "HID" || NameHas("Mouse") || NameHas("Keyboard"))
         {
-            if (hw.Contains("MusHID", StringComparison.OrdinalIgnoreCase) ||
-                hw.Contains("Mouse", StringComparison.OrdinalIgnoreCase) ||
-                hw.Contains("VID_046D&PID_C08", StringComparison.OrdinalIgnoreCase))
-                return "🖱";
-            if (hw.Contains("Keyboard", StringComparison.OrdinalIgnoreCase))
-                return "⌨";
+            if (HwHas("MusHID") || HwHas("Mouse") || HwHas("VID_046D&PID_C08") ||
+                NameHas("Mouse") || NameHas("Trackball"))
+                return "mouse";
+            if (HwHas("Keyboard") || NameHas("Keyboard"))
+                return "keyboard";
         }
-        if (cls is "AudioEndpoint" or "MEDIA" or "AudioProcessingObject")
-            return "🎧";
-        if (cls is "WPD" or "DiskDrive" or "USBStorage" ||
-            hw.Contains("SCSI", StringComparison.OrdinalIgnoreCase) && hw.Contains("Disk", StringComparison.OrdinalIgnoreCase))
-            return "💾";
-        if (cls is "Display" or "Monitor")
-            return "🖥";
-        if (cls is "XInput" or "GameControl" || d.IsController || d.GameRelevant)
-            return "🎮";
-        return "🔌";
+
+        if (cls is "AudioEndpoint" or "MEDIA" or "AudioProcessingObject" ||
+            NameHas("Headset") || NameHas("Headphone") || NameHas("Speaker") ||
+            NameHas("Microphone") || NameHas("Audio") || NameHas("Sound"))
+            return "headset";
+
+        if (cls is "Image" or "Camera" || HwHas("Camera") ||
+            NameHas("Webcam") || NameHas("Camera"))
+            return "webcam";
+
+        if (cls is "WPD" or "DiskDrive" or "USBStorage" or "SCSIAdapter" ||
+            (HwHas("SCSI") && HwHas("Disk")) ||
+            NameHas("Storage") || NameHas("SSD") || NameHas("Drive"))
+            return "storage";
+
+        // Controllers: gamepads, fightsticks, HOTAS, joysticks — HID game usage,
+        // XINPUT children, or an explicit controller flag from the hardware layer.
+        if (d.IsController || d.GameRelevant || cls is "XInput" or "GameControl" ||
+            NameHas("Controller") || NameHas("Fightstick") || NameHas("Gamepad") ||
+            NameHas("Joystick") || NameHas("HOTAS") || HwHas("IG_"))
+            return "controller";
+
+        return "unknown";
     }
 
-    public string InstanceId => Entry.Device?.InstanceId ?? "";
+    // ---------------- editor: technical details ----------------
+
+    public string VidPid => Entry.Device is { } d && TryVidPid(d, out var v) ? v : "—";
+
+    public string SerialText => string.IsNullOrWhiteSpace(Entry.Device?.Serial) ? "—" : Entry.Device!.Serial;
+
+    public string InstanceId => Entry.Device?.InstanceId is { Length: > 0 } id ? id : "—";
+
+    /// <summary>"Rear USB 3.2 Gen2 · port 3".</summary>
+    public string HubPortText => $"{HubName} · port {Entry.PortNumber}";
+
+    public string DetailsText =>
+        $"VID:PID  {VidPid}\nSerial   {SerialText}\nInstance {InstanceId}\nHub/port {HubPortText}";
+
+    private void CopyDetails()
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(DetailsText);
+            Controller.StatusText = "Device details copied to the clipboard.";
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // clipboard briefly locked by another process; nothing to do
+        }
+    }
 
     // ---------------- panel layout (free-form view) ----------------
 
@@ -284,4 +434,28 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
         throw new NotSupportedException();
+}
+
+/// <summary>Device kind ("controller", "mouse", …) → its line-icon geometry ("Icon" + Kind resource).</summary>
+public sealed class KindToGeometryConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        var kind = value as string is { Length: > 0 } k ? k : "unknown";
+        var key = "Icon" + char.ToUpperInvariant(kind[0]) + kind[1..];
+        return Application.Current.TryFindResource(key) ?? Application.Current.TryFindResource("IconUnknown");
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>Negates a bool (two-way), so one setting can drive two mutually exclusive radio buttons.</summary>
+public sealed class InverseBoolConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        value is bool b && !b;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        value is bool b && !b;
 }

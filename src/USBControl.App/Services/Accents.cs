@@ -5,8 +5,8 @@ using System.Windows.Media.Effects;
 namespace USBControl.App.Services;
 
 /// <summary>
-/// The neon accent catalog. Each palette recolors the whole UI (brand, focus, hover
-/// glow, selection) while green/amber/red stay reserved for device state. Switching
+/// The neon accent catalog. Each palette recolors the whole UI (selected fills, focus,
+/// hover glow) while green/amber/red stay reserved for device state. Switching
 /// replaces the "accent" ResourceDictionary with freshly built, frozen brushes.
 ///
 /// Consumers must reference the accent resources with DynamicResource AT THE SETTER
@@ -51,27 +51,13 @@ public static class Accents
         Brush("AccentDimBrush", p.Dim);
         Brush("AccentGlowBrush", p.Glow);
 
-        // The wordmark/top-bar gradient: accent glow fading to transparent.
-        var grad = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(1, 0),
-        };
-        grad.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.0));
-        grad.GradientStops.Add(new GradientStop(p.Glow, 0.45));
-        grad.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 1.0));
-        grad.Freeze();
-        dict["TopbarGradient"] = grad;
+        // Translucent variants for selected fills (20%) and hover borders (40%).
+        Brush("AccentSoftBrush", Color.FromArgb(0x33, p.Base.R, p.Base.G, p.Base.B));
+        Brush("AccentLineBrush", Color.FromArgb(0x66, p.Base.R, p.Base.G, p.Base.B));
 
-        var brand = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(1, 0),
-        };
-        brand.GradientStops.Add(new GradientStop(p.Base, 1.0));
-        brand.GradientStops.Add(new GradientStop(p.Glow, 0.0));
-        brand.Freeze();
-        dict["BrandGradient"] = brand;
+        // Tile borders: hover is a quiet 35% hairline, selection a firm 70% ring.
+        Brush("AccentHoverBrush", Color.FromArgb(0x59, p.Base.R, p.Base.G, p.Base.B));
+        Brush("AccentSelectBrush", Color.FromArgb(0xB3, p.Base.R, p.Base.G, p.Base.B));
 
         Effect Glow(Color c, double radius, double opacity)
         {
@@ -86,8 +72,9 @@ public static class Accents
             return e;
         }
 
-        dict["AccentGlowEffect"] = Glow(p.Base, 16, 0.55);
-        dict["AccentGlowStrongEffect"] = Glow(p.Base, 22, 0.8);
+        dict["AccentGlowEffect"] = Glow(p.Base, 14, 0.45);
+        dict["AccentGlowStrongEffect"] = Glow(p.Base, 20, 0.6);
+        dict["AccentSelectGlowEffect"] = Glow(p.Base, 18, 0.35); // soft outer glow for a selected tile
 
         var res = Application.Current.Resources.MergedDictionaries;
         var existing = res.FirstOrDefault(d => d.Contains("AccentBrush"));

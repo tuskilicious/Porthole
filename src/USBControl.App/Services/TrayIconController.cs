@@ -262,9 +262,9 @@ public sealed class TrayIconController : IDisposable
 
     private static IntPtr CreateTrayIconHandle()
     {
-        var accent = new SolidColorBrush(Color.FromRgb(0x4C, 0xC2, 0xFF));
+        var accent = new SolidColorBrush((Color)Application.Current.Resources["AccentColor"]);
         accent.Freeze();
-        var bg = new SolidColorBrush(Color.FromRgb(0x2A, 0x31, 0x40));
+        var bg = new SolidColorBrush((Color)Application.Current.Resources["RaisedColor"]);
         bg.Freeze();
 
         var dv = new DrawingVisual();
