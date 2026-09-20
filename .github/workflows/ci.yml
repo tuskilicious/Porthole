@@ -1,0 +1,57 @@
+name: CI
+
+# Runs on a clean, cloud-hosted Windows VM. It has no real USB devices, so it verifies
+# build + tests (fake USB bus) + the published exe starting up and rendering every UI state
+# in --demo mode. Real-hardware toggling still has to be checked on a physical PC.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        run: dotnet build USBControl.sln -c Release --nologo
+
+      - name: Test
+        run: dotnet test tests/USBControl.Tests/USBControl.Tests.csproj -c Release --no-build --nologo
+
+      - name: Publish single-file exe
+        run: >
+          dotnet publish src/USBControl.App/USBControl.App.csproj -c Release -r win-x64
+          --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -o publish --nologo
+
+      - name: Run the published app in demo mode and capture every UI state
+        run: |
+          New-Item -ItemType Directory -Force shots | Out-Null
+          $p = Start-Process publish\USBControl.exe -ArgumentList '--demo','--screenshot',"$PWD\shots\ui.png" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'demo mode did not finish within 2 minutes' }
+
+          $expected = 'ui','ui-editor-empty','ui-selected','ui-wide','ui-panel','ui-nodevices','ui-settings'
+          $missing = $expected | Where-Object { -not (Test-Path "shots\$_.png") }
+          if ($missing) { throw "missing screenshots: $($missing -join ', ')" }
+
+          $logs = "$env:APPDATA\USBControl"
+          foreach ($name in 'crash.log','binding-errors.log') {
+            $f = Join-Path $logs $name
+            if (Test-Path $f) { Write-Host "--- $name"; Get-Content $f; throw "$name was written" }
+          }
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-screenshots
+          path: shots/
+          if-no-files-found: warn
