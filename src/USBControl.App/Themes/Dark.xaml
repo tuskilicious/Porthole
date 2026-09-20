@@ -42,6 +42,19 @@
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
   </Style>
 
+  <!-- summary band: big number over a small tracked-out label -->
+  <Style x:Key="StatValue" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource FontHeading}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeStat}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+
+  <Style x:Key="StatLabel" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeStatLabel}" />
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="Margin" Value="0,2,0,0" />
+  </Style>
+
   <Style x:Key="MutedText" TargetType="TextBlock">
     <Setter Property="FontSize" Value="{StaticResource FontSizeSecondary}" />
     <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
@@ -349,8 +362,10 @@
           <Grid Background="Transparent">
             <Border x:Name="track" CornerRadius="{StaticResource RadiusToggle}"
                     Background="{StaticResource ToggleOffBrush}" />
+            <!-- the accent track carries the soft bloom around an "on" switch -->
             <Border x:Name="accentTrack" CornerRadius="{StaticResource RadiusToggle}"
-                    Background="{DynamicResource AccentBrush}" Opacity="0" />
+                    Background="{DynamicResource AccentBrush}" Opacity="0"
+                    Effect="{DynamicResource AccentGlowEffect}" />
             <Ellipse x:Name="thumb" Width="{StaticResource ToggleThumbSize}"
                      Height="{StaticResource ToggleThumbSize}"
                      Fill="{StaticResource TextBrush}" HorizontalAlignment="Left"
@@ -367,9 +382,10 @@
                 <BeginStoryboard>
                   <Storyboard>
                     <DoubleAnimation Storyboard.TargetName="thumbShift" Storyboard.TargetProperty="X"
-                                     To="{StaticResource ToggleThumbTravel}" Duration="{StaticResource MotionFast}" />
+                                     To="{StaticResource ToggleThumbTravel}" Duration="{StaticResource MotionBase}"
+                                     EasingFunction="{StaticResource EaseOut}" />
                     <DoubleAnimation Storyboard.TargetName="accentTrack" Storyboard.TargetProperty="Opacity"
-                                     To="1" Duration="{StaticResource MotionFast}" />
+                                     To="1" Duration="{StaticResource MotionBase}" />
                   </Storyboard>
                 </BeginStoryboard>
               </Trigger.EnterActions>
@@ -377,9 +393,10 @@
                 <BeginStoryboard>
                   <Storyboard>
                     <DoubleAnimation Storyboard.TargetName="thumbShift" Storyboard.TargetProperty="X"
-                                     To="0" Duration="{StaticResource MotionFast}" />
+                                     To="0" Duration="{StaticResource MotionBase}"
+                                     EasingFunction="{StaticResource EaseOut}" />
                     <DoubleAnimation Storyboard.TargetName="accentTrack" Storyboard.TargetProperty="Opacity"
-                                     To="0" Duration="{StaticResource MotionFast}" />
+                                     To="0" Duration="{StaticResource MotionBase}" />
                   </Storyboard>
                 </BeginStoryboard>
               </Trigger.ExitActions>

@@ -27,7 +27,7 @@ public sealed class HubGroupViewModel
     public string DisplayName => Entry.DisplayName;
 
     /// <summary>Header text: "HUB 3", hair-spaced to fake the letter-spacing WPF text lacks.</summary>
-    public string HubHeader => string.Join("\u200A", $"HUB {HubIndex + 1}".ToCharArray());
+    public string HubHeader => TextStyle.Track($"HUB {HubIndex + 1}");
 
     /// <summary>The one count under a hub header: "4 of 6 in use".</summary>
     public string UsageText => $"{Ports.Count(p => !p.IsEmpty)} of {Ports.Count} in use";
@@ -52,10 +52,11 @@ public sealed class PortViewModel : INotifyPropertyChanged
     private double _layoutX;
     private double _layoutY;
 
-    public PortViewModel(AppController controller, PortEntry entry)
+    public PortViewModel(AppController controller, PortEntry entry, bool appeared = false)
     {
         Controller = controller;
         Entry = entry;
+        Appeared = appeared;
         (_layoutX, _layoutY) = controller.GetPanelPos(entry.PortKey);
 
         ToggleCommand = new RelayCommand(
@@ -106,6 +107,9 @@ public sealed class PortViewModel : INotifyPropertyChanged
 
     public string PortKey => Entry.PortKey;
 
+    /// <summary>True when this tile's device was not on screen before the last refresh (drives the fade-in).</summary>
+    public bool Appeared { get; }
+
     public string PortTitle
     {
         get
@@ -114,6 +118,9 @@ public sealed class PortViewModel : INotifyPropertyChanged
             return string.IsNullOrWhiteSpace(meta.Label) ? $"Port {Entry.PortNumber}" : meta.Label;
         }
     }
+
+    /// <summary>The port label as a small tracked-out caption: "PORT 3" (or the user's label).</summary>
+    public string PortCaption => TextStyle.Track(PortTitle.ToUpperInvariant());
 
     public string HubName
     {
@@ -392,22 +399,31 @@ public sealed class PhotoConverter : IValueConverter
     private static readonly ConcurrentDictionary<string, ImageSource?> Cache =
         new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Render the picture desaturated (used for disabled devices).</summary>
+    public bool Grayscale { get; set; }
+
     public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         if (value is not string path || !File.Exists(path))
             return null;
-        return Cache.GetOrAdd(path, static p =>
+        var gray = Grayscale;
+        return Cache.GetOrAdd((gray ? "gray|" : "") + path, _ =>
         {
             try
             {
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad; // release the file handle immediately
-                bmp.UriSource = new Uri(p, UriKind.Absolute);
+                bmp.UriSource = new Uri(path, UriKind.Absolute);
                 bmp.DecodePixelWidth = 320; // decode at display size, not full resolution
                 bmp.EndInit();
                 bmp.Freeze(); // thread-safe + no WPF bitmap overhead
-                return (ImageSource)bmp;
+                if (!gray)
+                    return (ImageSource)bmp;
+
+                var converted = new FormatConvertedBitmap(bmp, PixelFormats.Gray32Float, null, 0);
+                converted.Freeze();
+                return converted;
             }
             catch
             {
@@ -458,4 +474,14 @@ public sealed class InverseBoolConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
         value is bool b && !b;
+}
+
+/// <summary>Small text helpers for the tracked-out caps look.</summary>
+public static class TextStyle
+{
+    /// <summary>
+    /// Fakes letter-spacing (~0.08em) by putting a hair space between characters, since WPF
+    /// TextBlock has no tracking property.
+    /// </summary>
+    public static string Track(string text) => string.Join("\u200A", text.ToCharArray());
 }

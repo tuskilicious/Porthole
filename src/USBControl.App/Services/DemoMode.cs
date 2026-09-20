@@ -40,6 +40,11 @@ public static class DemoMode
         await Task.Delay(3500);
         Render(window, path);
 
+        // Editor open with nothing selected: its empty state.
+        vm.IsEditorOpen = true;
+        await Task.Delay(600);
+        Render(window, Path.ChangeExtension(path, null) + "-editor-empty.png");
+
         vm.SelectedPort = controller.PanelPorts.FirstOrDefault(p =>
             p.Device?.HardwareId.Contains("PID_0B12", StringComparison.OrdinalIgnoreCase) == true);
         window.UpdateLayout();
@@ -61,6 +66,12 @@ public static class DemoMode
         controller.IsPanelMode = true;
         await Task.Delay(1500);
         Render(window, stem + "-panel.png");
+
+        // No devices at all.
+        controller.IsPanelMode = false;
+        controller.Hubs.Clear();
+        await Task.Delay(600);
+        Render(window, stem + "-nodevices.png");
 
         // Settings dialog (modal, so it opens from a queued dispatcher call).
         controller.IsPanelMode = false;
