@@ -22,6 +22,13 @@ public sealed class UsbDeviceInfo
     public bool IsController { get; set; }
     public byte Speed { get; set; }
 
+    /// <summary>
+    /// The hub's USB_CONNECTION_STATUS for this port (1 = connected; 2 = failed enumeration,
+    /// 3 = general failure, 4 = over-current, 5 = not enough power, 6 = not enough bandwidth,
+    /// 7 = hub nested too deeply, 8 = legacy hub). Explains an Error tile; 0 when unknown.
+    /// </summary>
+    public byte ConnectionStatus { get; set; }
+
     /// <summary>True when the device (or one of its child devnodes) is a HID / game controller class device.</summary>
     public bool GameRelevant { get; set; }
 

@@ -338,6 +338,7 @@ public sealed class UsbTopologyService : ITopologyService
                 Identity = instanceId is { Length: > 0 } ? DeviceIdentity.Build(instanceId) : $"VID_{descriptor.idVendor:X4}&PID_{descriptor.idProduct:X4}",
                 IsHub = info.DeviceIsHub != 0,
                 Speed = info.Speed,
+                ConnectionStatus = (byte)info.ConnectionStatus,
             };
 
             device.HardwareId = $"USB\\VID_{descriptor.idVendor:X4}&PID_{descriptor.idProduct:X4}";

@@ -102,7 +102,10 @@ public partial class App : Application
             power = new DevicePowerService();
         }
 
-        Controller = new AppController(store, topology, power);
+        Controller = new AppController(store, topology, power)
+        {
+            Confirm = ConfirmDialog,
+        };
         if (IsDemoMode)
         {
             // Demo closes like a normal window instead of hiding in the tray —
@@ -130,6 +133,16 @@ public partial class App : Application
 
         if (e.Args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
             win.HideToTray();
+    }
+
+    /// <summary>Yes/No warning dialog (defaults to No), owned by the main window when it is showing.</summary>
+    private static bool ConfirmDialog(string title, string message)
+    {
+        var owner = Current.MainWindow is { IsVisible: true } w ? w : null;
+        var result = owner is null
+            ? MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No)
+            : MessageBox.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        return result == MessageBoxResult.Yes;
     }
 
     public static void RequestShutdown()

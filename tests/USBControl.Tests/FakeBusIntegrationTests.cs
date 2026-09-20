@@ -244,4 +244,55 @@ public class FakeBusIntegrationTests : IDisposable
         Assert.Equal(PanelLayoutMath.SnapX(500), pos.X);
         Assert.Equal(PanelLayoutMath.SnapY(300), pos.Y);
     }
+
+    // ---------------- lockout safety ----------------
+
+    private void PlugKeyboard() =>
+        _rig.Bus.Plug(FakeDeviceSpec.Hid("046D", "C534", "G512 RGB Mechanical Keyboard"), "HUB01#3");
+
+    private PortEntry KeyboardEntry() =>
+        _rig.Controller.Hubs.SelectMany(h => h.Ports).First(p => p.PortKey == "HUB01#3").Entry;
+
+    [Fact]
+    public async Task Declining_The_Prompt_Keeps_The_Last_Keyboard_Enabled()
+    {
+        PlugKeyboard();
+        await _rig.SettleAsync();
+        string? asked = null;
+        _rig.Controller.Confirm = (title, _) => { asked = title; return false; };
+
+        await _rig.Controller.ToggleAsync(KeyboardEntry(), enable: false);
+        await _rig.SettleAsync();
+
+        Assert.Equal("Disable your last keyboard or mouse?", asked);
+        Assert.Equal(PortState.Connected, Snap().AllPorts.First(p => p.PortKey == "HUB01#3").State);
+    }
+
+    [Fact]
+    public async Task Accepting_The_Prompt_Disables_The_Keyboard()
+    {
+        PlugKeyboard();
+        await _rig.SettleAsync();
+        _rig.Controller.Confirm = (_, _) => true;
+
+        await _rig.Controller.ToggleAsync(KeyboardEntry(), enable: false);
+        await _rig.SettleAsync();
+
+        Assert.Equal(PortState.Disabled, Snap().AllPorts.First(p => p.PortKey == "HUB01#3").State);
+    }
+
+    [Fact]
+    public async Task Enable_All_Disabled_Re_Enables_Everything_Disabled()
+    {
+        await _rig.SettleAsync();
+        foreach (var id in new[] { _ids["stick"], _ids["pad1"] })
+            _rig.Bus.Disable(id);
+        await _rig.SettleAsync();
+        Assert.Equal(2, Snap().AllPorts.Count(p => p.State == PortState.Disabled));
+
+        await _rig.Controller.EnableAllDisabledAsync();
+        await _rig.SettleAsync();
+
+        Assert.DoesNotContain(Snap().AllPorts, p => p.State == PortState.Disabled);
+    }
 }
