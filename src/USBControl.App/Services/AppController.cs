@@ -32,6 +32,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
     [ObservableProperty]
     private string? activeProfile;
 
+    /// <summary>Identity of the device whose power change is in flight (its tile shows the Busy chip).</summary>
+    [ObservableProperty]
+    private string? busyDeviceIdentity;
+
     /// <summary>Raised after a rebuild when the previously toggled port re-appeared (keeps the editor pinned).</summary>
     public event Action<PortEntry>? PortFocused;
 
@@ -133,9 +137,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
         {
             Hubs.Clear();
             PanelPorts.Clear();
+            var hubIndex = 0;
             foreach (var hub in _snapshot.Hubs)
             {
-                var vm = new HubGroupViewModel(this, hub);
+                var vm = new HubGroupViewModel(this, hub, hubIndex++);
                 foreach (var port in hub.Ports.Where(ShouldShow))
                 {
                     var portVm = new PortViewModel(this, port);
@@ -193,6 +198,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
             return;
 
         IsBusy = true;
+        BusyDeviceIdentity = port.Device.Identity;
         StatusText = $"{(enable ? "Enabling" : "Disabling")} {port.Device.DisplayName}…";
         try
         {
@@ -211,6 +217,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
         }
         finally
         {
+            BusyDeviceIdentity = null;
             IsBusy = false;
         }
     }

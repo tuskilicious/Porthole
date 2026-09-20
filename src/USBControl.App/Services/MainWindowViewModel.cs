@@ -22,9 +22,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         get => _selectedPort;
         set
         {
+            if (_selectedPort is not null)
+                _selectedPort.IsSelected = false;
             _selectedPort = value;
+            if (value is not null)
+                value.IsSelected = true;
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelection));
+        }
+    }
+
+    private bool _isEditorOpen;
+
+    /// <summary>The 340px device editor is expanded; false (the default, until a port is picked) leaves just the rail.</summary>
+    public bool IsEditorOpen
+    {
+        get => _isEditorOpen;
+        set
+        {
+            if (_isEditorOpen == value) return;
+            _isEditorOpen = value;
+            OnPropertyChanged();
         }
     }
 
@@ -54,6 +72,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand OpenSettingsCommand { get; }
     public ICommand HidePortCommand { get; }
     public ICommand ResetPanelLayoutCommand { get; }
+    public ICommand ToggleEditorCommand { get; }
 
     public MainWindowViewModel(AppController controller)
     {
@@ -70,11 +89,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OpenSettingsCommand = new RelayCommand(_ => Services.SettingsWindow.Show(Controller));
         HidePortCommand = new RelayCommand(o => { if (o is PortViewModel vm) Controller.TogglePortHidden(vm.Entry); });
         ResetPanelLayoutCommand = new RelayCommand(_ => Controller.ResetPanelLayout());
+        ToggleEditorCommand = new RelayCommand(_ => IsEditorOpen = !IsEditorOpen);
 
-        PortViewModel.EditorRequested += vm => SelectedPort = vm;
-        Controller.PortFocused += entry => SelectedPort = FindViewModel(entry);
+        PortViewModel.EditorRequested += vm =>
+        {
+            SelectedPort = vm;
+            IsEditorOpen = true;
+        };
+        // After a toggle, keep an already-open selection pinned to the same device; never
+        // select (and so never open the editor for) a tile the user has not clicked.
+        Controller.PortFocused += entry =>
+        {
+            if (SelectedPort is not null)
+                SelectedPort = FindViewModel(entry);
+        };
         Controller.PropertyChanged += (_, e) =>
         {
+            // Tiles are rebuilt on every refresh: carry the selection ring over to the fresh
+            // tile for the same port. The editor keeps its current view-model so typing in a
+            // field isn't interrupted by the refresh that a rename triggers.
+            if (e.PropertyName == nameof(AppController.Hubs) && SelectedPort is { } sel)
+            {
+                var fresh = Controller.Hubs.SelectMany(h => h.Ports)
+                    .FirstOrDefault(vm => vm.PortKey == sel.PortKey);
+                if (fresh is not null)
+                    fresh.IsSelected = true;
+            }
+
             if (e.PropertyName is nameof(AppController.IsBusy) or nameof(AppController.StatusText))
             {
                 OnPropertyChanged(nameof(IsBusy));
@@ -84,6 +125,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         Controller.Hubs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoHubs));
     }
 
+    /// <summary>The tile view-model wrapping a snapshot entry (null when the port is filtered out).</summary>
     private PortViewModel? FindViewModel(PortEntry entry) =>
         Controller.Hubs.SelectMany(h => h.Ports).FirstOrDefault(vm => vm.Entry == entry);
 

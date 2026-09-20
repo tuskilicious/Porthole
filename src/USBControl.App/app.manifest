@@ -5,8 +5,11 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Enable/disable of devices (same mechanism as Device Manager) requires elevation. -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- Real device enable/disable needs Device-Manager rights, but the OS cannot know
+             that per-run: demo mode must be able to start WITHOUT elevation (school PCs,
+             screenshot tooling, CI). So the app launches unelevated (asInvoker) and elevates
+             itself at startup via ShellExecute runas (App.EnsureElevation) in normal mode. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

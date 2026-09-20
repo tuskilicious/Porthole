@@ -1,0 +1,312 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:svc="clr-namespace:USBControl.App.Services">
+
+  <!-- ============================================================================
+       TILES.XAML — the shared port tile + status chip, plus the value converters
+       the views need. The tile is used by both the responsive hub grid and the
+       free-form panel canvas. Bind it with:
+         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PortTile}" />
+       (Content={Binding} feeds the port view-model in; without it the template
+       inflates against a null DataContext and every binding silently fails.)
+       ============================================================================ -->
+
+  <svc:PhotoConverter x:Key="PhotoConverter" />
+  <svc:BoolToVisibilityConverter x:Key="BoolToVis" />
+  <svc:BoolToVisibilityConverter x:Key="InverseBoolToVis" Inverse="True" />
+  <svc:KindToGeometryConverter x:Key="KindToGeometry" />
+  <svc:InverseBoolConverter x:Key="InverseBool" />
+
+  <!-- device-type glyph (inside the icon well / editor header) -->
+  <Style x:Key="TileGlyph" TargetType="Path" BasedOn="{StaticResource IconPath}">
+    <Setter Property="Width" Value="{StaticResource TypeGlyphSize}" />
+    <Setter Property="Height" Value="{StaticResource TypeGlyphSize}" />
+    <Setter Property="Stroke" Value="{StaticResource TextDimBrush}" />
+    <Setter Property="Data" Value="{Binding DeviceKind, Converter={StaticResource KindToGeometry}}" />
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding IsSelected}" Value="True">
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+        <Setter Property="Stroke" Value="{StaticResource TextMutedBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+        <Setter Property="Stroke" Value="{StaticResource TextMutedBrush}" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- busy arc inside a status chip -->
+  <Style x:Key="ChipSpinner" TargetType="Ellipse">
+    <Setter Property="Width" Value="{StaticResource SpinnerSize}" />
+    <Setter Property="Height" Value="{StaticResource SpinnerSize}" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeDashArray" Value="2.2 1.5" />
+    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+  </Style>
+
+  <!-- ===================== status chip: LED dot + label ===================== -->
+  <!-- Connected (green) / Disabled (gray) / Error (red) / Busy (accent spinner) / Hub. -->
+
+  <DataTemplate x:Key="StatusChip">
+    <Border x:Name="chip" HorizontalAlignment="Left" Padding="{StaticResource ChipPadding}"
+            ToolTip="{Binding StatusTooltip}"
+            CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource NeutralSoftBrush}">
+      <StackPanel Orientation="Horizontal">
+        <Grid Width="{StaticResource SpinnerSize}" Height="{StaticResource SpinnerSize}" Margin="0,0,6,0"
+              VerticalAlignment="Center">
+          <Ellipse x:Name="dot" Width="{StaticResource ChipDotSize}" Height="{StaticResource ChipDotSize}"
+                   Fill="{StaticResource TextMutedBrush}" />
+          <Ellipse x:Name="spinner" Style="{StaticResource ChipSpinner}" Visibility="Collapsed">
+            <Ellipse.RenderTransform>
+              <RotateTransform x:Name="spinnerTurn" Angle="0" />
+            </Ellipse.RenderTransform>
+          </Ellipse>
+        </Grid>
+        <TextBlock x:Name="label" Text="{Binding StateText}" FontSize="{StaticResource FontSizeChip}"
+                   FontWeight="SemiBold" Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+    <DataTemplate.Triggers>
+      <DataTrigger Binding="{Binding StatusKind}" Value="connected">
+        <Setter TargetName="chip" Property="Background" Value="{StaticResource GoodSoftBrush}" />
+        <Setter TargetName="dot" Property="Fill" Value="{StaticResource GoodBrush}" />
+        <Setter TargetName="label" Property="Foreground" Value="{StaticResource GoodBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding StatusKind}" Value="hub">
+        <Setter TargetName="dot" Property="Fill" Value="{StaticResource GoodBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding StatusKind}" Value="disabled">
+        <Setter TargetName="label" Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding StatusKind}" Value="error">
+        <Setter TargetName="chip" Property="Background" Value="{StaticResource BadSoftBrush}" />
+        <Setter TargetName="dot" Property="Fill" Value="{StaticResource BadBrush}" />
+        <Setter TargetName="label" Property="Foreground" Value="{StaticResource BadBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding StatusKind}" Value="busy">
+        <Setter TargetName="dot" Property="Visibility" Value="Collapsed" />
+        <Setter TargetName="spinner" Property="Visibility" Value="Visible" />
+        <Setter TargetName="chip" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        <Setter TargetName="label" Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        <DataTrigger.EnterActions>
+          <BeginStoryboard x:Name="spin">
+            <Storyboard RepeatBehavior="Forever">
+              <DoubleAnimation Storyboard.TargetName="spinnerTurn" Storyboard.TargetProperty="Angle"
+                               From="0" To="360" Duration="0:0:1.1" />
+            </Storyboard>
+          </BeginStoryboard>
+        </DataTrigger.EnterActions>
+        <DataTrigger.ExitActions>
+          <StopStoryboard BeginStoryboardName="spin" />
+        </DataTrigger.ExitActions>
+      </DataTrigger>
+    </DataTemplate.Triggers>
+  </DataTemplate>
+
+  <!-- ===================== port tile ===================== -->
+  <!-- Layout (16px padding): type icon well left · bold name (max 2 lines) with the
+       port label underneath · on/off switch top-right · status chip bottom-left.
+       Hover = raised fill + 40% accent ring; selected = 2px accent ring + soft glow;
+       disabled = whole tile at 55%; error = red chip only; empty = dashed outline. -->
+
+  <DataTemplate x:Key="PortTile">
+    <Grid x:Name="root" MinHeight="{StaticResource TileMinHeight}" Background="Transparent"
+          RenderTransformOrigin="0.5,0.5">
+      <Grid.RenderTransform>
+        <ScaleTransform x:Name="scale" ScaleX="1" ScaleY="1" />
+      </Grid.RenderTransform>
+      <Grid.InputBindings>
+        <MouseBinding Gesture="LeftClick" Command="{Binding OpenEditorCommand}" />
+      </Grid.InputBindings>
+
+      <Border x:Name="card" CornerRadius="{StaticResource RadiusTile}" Padding="{StaticResource TilePadding}"
+              BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+        <Border.Background>
+          <SolidColorBrush x:Name="cardFill" Color="{StaticResource SurfaceColor}" />
+        </Border.Background>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- icon well: device photo if set, otherwise the device-type glyph -->
+            <Border Width="{StaticResource IconWellSize}" Height="{StaticResource IconWellSize}"
+                    CornerRadius="{StaticResource RadiusControl}" Background="{StaticResource RaisedBrush}"
+                    BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                    Margin="0,0,12,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="VerticalAlignment" Value="Top" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                      <Setter Property="VerticalAlignment" Value="Center" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <Grid>
+                <Path Style="{StaticResource TileGlyph}"
+                      Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}" />
+                <Border CornerRadius="{StaticResource RadiusControl}"
+                        Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}">
+                  <Border.Background>
+                    <ImageBrush ImageSource="{Binding PhotoPath, Converter={StaticResource PhotoConverter}}"
+                                Stretch="UniformToFill" />
+                  </Border.Background>
+                </Border>
+              </Grid>
+            </Border>
+
+            <!-- hubs and empty ports have no switch, so the Auto column collapses to zero
+                 and the name uses that space -->
+            <StackPanel Grid.Column="1">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Setter Property="VerticalAlignment" Value="Top" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                      <Setter Property="VerticalAlignment" Value="Center" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
+              <TextBlock Text="{Binding DeviceName}" ToolTip="{Binding DeviceNameFull}"
+                         FontSize="{StaticResource FontSizeName}" FontWeight="SemiBold"
+                         TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                         LineHeight="20" LineStackingStrategy="BlockLineHeight" MaxHeight="40"
+                         Foreground="{StaticResource TextBrush}">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <TextBlock Text="{Binding PortTitle}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                         FontSize="{StaticResource FontSizeSecondary}"
+                         Foreground="{StaticResource TextDimBrush}" />
+            </StackPanel>
+
+            <!-- hubs and empty ports get no switch -->
+            <ToggleButton x:Name="toggle" Grid.Column="2" Style="{StaticResource ToggleSwitch}"
+                          VerticalAlignment="Top" Margin="8,2,0,0"
+                          IsChecked="{Binding IsOn, Mode=OneWay}"
+                          Command="{Binding ToggleCommand}"
+                          Visibility="{Binding HasToggle, Converter={StaticResource BoolToVis}}"
+                          ToolTip="{Binding ToggleTooltip}" />
+          </Grid>
+
+          <ContentControl Grid.Row="1" Margin="0,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                          Content="{Binding}" ContentTemplate="{StaticResource StatusChip}"
+                          Visibility="{Binding HasDevice, Converter={StaticResource BoolToVis}}" />
+        </Grid>
+      </Border>
+
+      <!-- empty port: dim the card and outline it with a dashed border -->
+      <Border x:Name="emptyCover" CornerRadius="{StaticResource RadiusTile}" Background="{StaticResource BgBrush}"
+              Opacity="0.55" IsHitTestVisible="False"
+              Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
+      <Rectangle x:Name="dash" RadiusX="{StaticResource RadiusTileValue}" RadiusY="{StaticResource RadiusTileValue}"
+                 Stroke="{StaticResource BorderStrongBrush}" StrokeThickness="1" StrokeDashArray="4 3"
+                 IsHitTestVisible="False"
+                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
+
+      <!-- hover / selection rings (overlays, so the layout never shifts) -->
+      <!-- hover: 1px at 35% accent, no glow. selected: 2px at 70% accent + soft outer glow. -->
+      <Border x:Name="hoverRing" CornerRadius="{StaticResource RadiusTile}" BorderThickness="1"
+              BorderBrush="{DynamicResource AccentHoverBrush}" Opacity="0" IsHitTestVisible="False" />
+      <Border x:Name="selRing" CornerRadius="{StaticResource RadiusTile}" BorderThickness="2"
+              BorderBrush="{DynamicResource AccentSelectBrush}" Effect="{DynamicResource AccentSelectGlowEffect}"
+              Opacity="0" IsHitTestVisible="False" />
+    </Grid>
+
+    <DataTemplate.Triggers>
+      <Trigger SourceName="root" Property="IsMouseOver" Value="True">
+        <Trigger.EnterActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="hoverRing" Storyboard.TargetProperty="Opacity"
+                               To="1" Duration="{StaticResource MotionFast}" />
+              <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleX"
+                               To="{StaticResource HoverScale}" Duration="{StaticResource MotionFast}" />
+              <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleY"
+                               To="{StaticResource HoverScale}" Duration="{StaticResource MotionFast}" />
+              <ColorAnimation Storyboard.TargetName="cardFill" Storyboard.TargetProperty="Color"
+                              To="{StaticResource RaisedColor}" Duration="{StaticResource MotionFast}" />
+            </Storyboard>
+          </BeginStoryboard>
+        </Trigger.EnterActions>
+        <Trigger.ExitActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="hoverRing" Storyboard.TargetProperty="Opacity"
+                               To="0" Duration="{StaticResource MotionFast}" />
+              <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleX"
+                               To="1" Duration="{StaticResource MotionFast}" />
+              <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleY"
+                               To="1" Duration="{StaticResource MotionFast}" />
+              <ColorAnimation Storyboard.TargetName="cardFill" Storyboard.TargetProperty="Color"
+                              To="{StaticResource SurfaceColor}" Duration="{StaticResource MotionFast}" />
+            </Storyboard>
+          </BeginStoryboard>
+        </Trigger.ExitActions>
+      </Trigger>
+
+      <DataTrigger Binding="{Binding IsSelected}" Value="True">
+        <DataTrigger.EnterActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="selRing" Storyboard.TargetProperty="Opacity"
+                               To="1" Duration="{StaticResource MotionFast}" />
+            </Storyboard>
+          </BeginStoryboard>
+        </DataTrigger.EnterActions>
+        <DataTrigger.ExitActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="selRing" Storyboard.TargetProperty="Opacity"
+                               To="0" Duration="{StaticResource MotionFast}" />
+            </Storyboard>
+          </BeginStoryboard>
+        </DataTrigger.ExitActions>
+      </DataTrigger>
+
+      <DataTrigger Binding="{Binding IsProblem}" Value="True">
+        <Setter TargetName="toggle" Property="Opacity" Value="0.4" />
+      </DataTrigger>
+
+      <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+        <DataTrigger.EnterActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="Opacity"
+                               To="{StaticResource DisabledOpacity}" Duration="{StaticResource MotionFast}" />
+            </Storyboard>
+          </BeginStoryboard>
+        </DataTrigger.EnterActions>
+        <DataTrigger.ExitActions>
+          <BeginStoryboard>
+            <Storyboard>
+              <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="Opacity"
+                               To="1" Duration="{StaticResource MotionFast}" />
+            </Storyboard>
+          </BeginStoryboard>
+        </DataTrigger.ExitActions>
+      </DataTrigger>
+    </DataTemplate.Triggers>
+  </DataTemplate>
+
+</ResourceDictionary>
