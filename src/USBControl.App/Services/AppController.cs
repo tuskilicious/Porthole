@@ -53,6 +53,12 @@ public sealed partial class AppController : ObservableObject, IDisposable
     public event Action<PortEntry>? PortFocused;
 
     public AppStore Store { get; }
+
+    /// <summary>
+    /// Asks the user a yes/no question (title, message). Wired by the UI at startup; while it is
+    /// null (unit tests, headless use) risky actions proceed without asking.
+    /// </summary>
+    public Func<string, string, bool>? Confirm { get; set; }
     public ObservableCollection<HubGroupViewModel> Hubs { get; } = new();
     public ObservableCollection<PortViewModel> PanelPorts { get; } = new();
     public ObservableCollection<Profile> ProfileList { get; } = new();
@@ -66,7 +72,81 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
         SyncProfileList();
         _topology.Changed += OnTopologyChanged;
-        _ = RefreshAsync(firstRun: true);
+        _ = RefreshAsync(firstRun: true).ContinueWith(_ => RunOnUi(CheckInterruptedApply));
+    }
+
+    // ---------------- lockout safety ----------------
+
+    private string ApplyFlagPath => Path.Combine(Store.RootDir, "apply-in-progress.flag");
+
+    /// <summary>False when the user declined to disable a keyboard/mouse the guard flagged.</summary>
+    private bool ConfirmDisable(IEnumerable<string> instanceIds)
+    {
+        var risks = InputGuard.Assess(_snapshot, instanceIds);
+        return risks.Count == 0 || Confirm is null
+            || Confirm(risks.Any(r => r.IsLastEnabled) ? "Disable your last keyboard or mouse?" : "Disable input device?",
+                InputGuard.Describe(risks));
+    }
+
+    /// <summary>
+    /// A profile apply that never finished (crash, power loss) leaves a marker file behind. On the
+    /// next start, offer to undo whatever was left disabled.
+    /// </summary>
+    private void CheckInterruptedApply()
+    {
+        if (!File.Exists(ApplyFlagPath))
+            return;
+        TryDeleteFlag();
+        if (Confirm?.Invoke("Interrupted profile apply",
+                "USB Control closed while applying a profile, so some devices may have been left disabled.\n\nEnable every disabled device now?") == true)
+            _ = EnableAllDisabledAsync();
+    }
+
+    private void TryDeleteFlag()
+    {
+        try { File.Delete(ApplyFlagPath); } catch { /* best effort */ }
+    }
+
+    /// <summary>Escape hatch: enables every device that is currently disabled.</summary>
+    public async Task EnableAllDisabledAsync()
+    {
+        var targets = _snapshot.AllPorts
+            .Where(p => p.Device is { IsHub: false } && p.State == PortState.Disabled)
+            .Select(p => p.Device!)
+            .ToList();
+        if (targets.Count == 0)
+        {
+            StatusText = "Nothing is disabled.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            StatusText = $"Enabling {targets.Count} disabled device{(targets.Count == 1 ? "" : "s")}…";
+            var failed = await Task.Run(() =>
+            {
+                var errors = new List<string>();
+                foreach (var d in targets)
+                {
+                    var (ok, error) = _power.SetEnabled(d.InstanceId, true);
+                    if (ok)
+                        Store.GetOrCreateDevice(d.Identity, d.InstanceId, d.DisplayName).LastKnownEnabled = true;
+                    else
+                        errors.Add($"{d.DisplayName}: {error}");
+                }
+                return errors;
+            });
+            Store.Save();
+            await RefreshAsync();
+            StatusText = failed.Count == 0
+                ? $"Enabled {targets.Count} device{(targets.Count == 1 ? "" : "s")}."
+                : $"Enabled {targets.Count - failed.Count} of {targets.Count}; failed: {string.Join("; ", failed.Take(3))}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     public AppSettings Settings => Store.Data.Settings;
@@ -223,6 +303,13 @@ public sealed partial class AppController : ObservableObject, IDisposable
     {
         if (port.Device is null)
             return;
+
+        if (!enable && !ConfirmDisable(new[] { port.Device.InstanceId }))
+        {
+            StatusText = $"Left {port.Device.DisplayName} enabled.";
+            await RefreshAsync(); // snaps the tile's switch back to its real state
+            return;
+        }
 
         IsBusy = true;
         BusyDeviceIdentity = port.Device.Identity;
@@ -459,9 +546,17 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
     public async Task ApplyProfileAsync(Profile profile)
     {
+        var disabling = ProfileEngine.BuildOps(_snapshot, profile).Where(o => !o.Enable).Select(o => o.InstanceId);
+        if (!ConfirmDisable(disabling))
+        {
+            StatusText = $"Profile '{profile.Name}' not applied.";
+            return;
+        }
+
         IsBusy = true;
         try
         {
+            try { File.WriteAllText(ApplyFlagPath, DateTime.UtcNow.ToString("O")); } catch { /* best effort */ }
             // Created on the caller (UI) thread so reports marshal correctly.
             var progress = new Progress<string>(s => StatusText = s);
             var snapshot = _snapshot; // stable reference for this batch
@@ -469,6 +564,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
             Settings.LastProfile = profile.Name;
             Store.Save();
             ActiveProfile = profile.Name;
+            TryDeleteFlag(); // finished: nothing to recover
             await RefreshAsync();
             StatusText = report.Success
                 ? $"Profile '{profile.Name}' applied ({report.Enabled} enabled, {report.Disabled} disabled)."

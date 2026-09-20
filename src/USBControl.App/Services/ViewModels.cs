@@ -210,11 +210,20 @@ public sealed class PortViewModel : INotifyPropertyChanged
         && ((Controller.BusyDeviceIdentity is { } id && id.Equals(d.Identity, StringComparison.OrdinalIgnoreCase))
             || (DemoBusyMatch is { Length: > 0 } m && d.HardwareId.Contains(m, StringComparison.OrdinalIgnoreCase)));
 
-    /// <summary>Why the chip says Error (null for every other state, so no tooltip shows).</summary>
-    public string? StatusTooltip => StatusKind == "error"
-        ? "Windows reports a problem with this device (a Device Manager error state), so it may not work. "
-          + "Unplug and reconnect it, or switch it off and on again; if it keeps failing, check its driver in Device Manager."
-        : null;
+    /// <summary>Why the chip says Error, from the hub's port status (null for every other state, so no tooltip shows).</summary>
+    public string? StatusTooltip => StatusKind == "error" ? ExplainError(Entry.Device?.ConnectionStatus ?? 0) : null;
+
+    private static string ExplainError(byte status) => status switch
+    {
+        2 => "The port could not enumerate this device (failed enumeration). Unplug it and plug it back in, or try another port or cable.",
+        3 => "The port reported a general failure with this device. Try another port or cable.",
+        4 => "This device drew too much current (over-current) and the port shut it down. Use a powered hub or another port.",
+        5 => "There is not enough power for this device on this port. Use a powered hub or another port.",
+        6 => "There is not enough USB bandwidth for this device on this controller. Move it to a different port or controller.",
+        7 => "This device is behind too many hubs. Plug it into a port closer to the PC.",
+        8 => "A high-speed device is plugged into a legacy hub. Use a USB 2.0 or newer hub.",
+        _ => "The port reported a problem with this device. Unplug and reconnect it, or try another port; if it keeps failing, check its driver in Device Manager.",
+    };
 
     public bool IsEmpty => Entry.Device is null;
     public bool HasDevice => Entry.Device is not null;
@@ -238,52 +247,7 @@ public sealed class PortViewModel : INotifyPropertyChanged
     /// specific and are checked before the broad game-device net so a "G512 RGB
     /// Mechanical Keyboard" (HIDClass, game-relevant) doesn't get the controller glyph.
     /// </summary>
-    public string DeviceKind => Entry.Device is null ? "empty" : ClassifyKind(Entry.Device);
-
-    private static string ClassifyKind(UsbDeviceInfo d)
-    {
-        if (d.IsHub)
-            return "hub";
-
-        var hw = d.HardwareId ?? "";
-        var cls = d.ClassName ?? "";
-        var name = d.ChildDisplayName ?? d.DisplayName ?? "";
-        bool HwHas(string s) => hw.Contains(s, StringComparison.OrdinalIgnoreCase);
-        bool NameHas(string s) => name.Contains(s, StringComparison.OrdinalIgnoreCase);
-
-        // HID usage: pointing and keyboard devices (checked before controllers).
-        if (cls is "HIDClass" or "HID" || NameHas("Mouse") || NameHas("Keyboard"))
-        {
-            if (HwHas("MusHID") || HwHas("Mouse") || HwHas("VID_046D&PID_C08") ||
-                NameHas("Mouse") || NameHas("Trackball"))
-                return "mouse";
-            if (HwHas("Keyboard") || NameHas("Keyboard"))
-                return "keyboard";
-        }
-
-        if (cls is "AudioEndpoint" or "MEDIA" or "AudioProcessingObject" ||
-            NameHas("Headset") || NameHas("Headphone") || NameHas("Speaker") ||
-            NameHas("Microphone") || NameHas("Audio") || NameHas("Sound"))
-            return "headset";
-
-        if (cls is "Image" or "Camera" || HwHas("Camera") ||
-            NameHas("Webcam") || NameHas("Camera"))
-            return "webcam";
-
-        if (cls is "WPD" or "DiskDrive" or "USBStorage" or "SCSIAdapter" ||
-            (HwHas("SCSI") && HwHas("Disk")) ||
-            NameHas("Storage") || NameHas("SSD") || NameHas("Drive"))
-            return "storage";
-
-        // Controllers: gamepads, fightsticks, HOTAS, joysticks — HID game usage,
-        // XINPUT children, or an explicit controller flag from the hardware layer.
-        if (d.IsController || d.GameRelevant || cls is "XInput" or "GameControl" ||
-            NameHas("Controller") || NameHas("Fightstick") || NameHas("Gamepad") ||
-            NameHas("Joystick") || NameHas("HOTAS") || HwHas("IG_"))
-            return "controller";
-
-        return "unknown";
-    }
+    public string DeviceKind => Entry.Device is null ? "empty" : DeviceClassifier.Classify(Entry.Device);
 
     // ---------------- editor: technical details ----------------
 

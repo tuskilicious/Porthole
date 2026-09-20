@@ -170,7 +170,10 @@ public static class DemoMode
                 if (port.Device is { } d
                     && d.Identity.StartsWith(_identityPrefix, StringComparison.OrdinalIgnoreCase)
                     && port.State == PortState.Connected)
+                {
                     port.State = PortState.Problem;
+                    d.ConnectionStatus = 5; // "not enough power" — exercises the error tooltip
+                }
             }
             return snap;
         }

@@ -86,6 +86,21 @@
     <!-- ===================== summary band ===================== -->
     <Border DockPanel.Dock="Top" Padding="{StaticResource StatBandPadding}"
             BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+      <DockPanel>
+        <!-- safety escape hatch: only shown while something is disabled -->
+        <Button DockPanel.Dock="Right" Content="Enable all disabled" VerticalAlignment="Center"
+                Command="{Binding EnableAllCommand}"
+                ToolTip="Re-enable every device that is currently disabled">
+          <Button.Style>
+            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Controller.DisabledCount}" Value="0">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Button.Style>
+        </Button>
       <StackPanel Orientation="Horizontal">
         <StackPanel Margin="0,0,32,0" MinWidth="72">
           <TextBlock Text="{Binding Controller.DeviceCount}" Style="{StaticResource StatValue}" />
@@ -107,6 +122,7 @@
           <TextBlock Text="H&#x200A;U&#x200A;B&#x200A;S" Style="{StaticResource StatLabel}" />
         </StackPanel>
       </StackPanel>
+      </DockPanel>
     </Border>
 
     <!-- ===================== status bar (32px) ===================== -->

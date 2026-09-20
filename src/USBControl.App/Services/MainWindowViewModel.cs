@@ -73,6 +73,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand HidePortCommand { get; }
     public ICommand ResetPanelLayoutCommand { get; }
     public ICommand ToggleEditorCommand { get; }
+    public ICommand EnableAllCommand { get; }
 
     public MainWindowViewModel(AppController controller)
     {
@@ -90,6 +91,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         HidePortCommand = new RelayCommand(o => { if (o is PortViewModel vm) Controller.TogglePortHidden(vm.Entry); });
         ResetPanelLayoutCommand = new RelayCommand(_ => Controller.ResetPanelLayout());
         ToggleEditorCommand = new RelayCommand(_ => IsEditorOpen = !IsEditorOpen);
+        EnableAllCommand = new RelayCommand(_ => _ = Controller.EnableAllDisabledAsync(),
+            _ => Controller.DisabledCount > 0 && !Controller.IsBusy);
 
         PortViewModel.EditorRequested += vm =>
         {
