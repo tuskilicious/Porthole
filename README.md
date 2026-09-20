@@ -124,7 +124,7 @@ Get `USBControl.exe` from the [latest release](https://github.com/tuskilicious/U
 
 | File | Size | Needs |
 | --- | --- | --- |
-| `…-win-x64.exe` | about 78 MB | nothing else (self-contained) |
+| `…-win-x64.exe` | about 75 MB | nothing else (self-contained) |
 | `…-win-x64-framework-dependent.exe` | about 25 MB | the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (x64) |
 
 Command line: `USBControl.exe --minimized` starts hidden in the tray (used by *Start with
