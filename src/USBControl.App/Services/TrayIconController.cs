@@ -67,6 +67,20 @@ public sealed class TrayIconController : IDisposable
         [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] presbits, uint dwResSize,
         bool fIcon, uint dwVer, int cxDesired, int cyDesired, uint flags);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint RegisterWindowMessageW(string message);
+
+    // The app runs elevated; Explorer does not, so its "taskbar was (re)created" broadcast is
+    // dropped by UIPI unless we explicitly allow it through.
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool ChangeWindowMessageFilterEx(IntPtr hwnd, uint message, uint action, IntPtr changeInfo);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr LoadIconW(IntPtr hInstance, IntPtr lpIconName);
+
+    private const uint MSGFLT_ALLOW = 1;
+    private static readonly IntPtr IDI_APPLICATION = new(32512);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int X; public int Y; }
 
@@ -79,6 +93,8 @@ public sealed class TrayIconController : IDisposable
     private readonly MainWindowViewModel _vm;
     private HwndSource? _source;
     private IntPtr _hIcon;
+    private bool _ownsIcon;
+    private uint _taskbarCreatedMsg;
     private bool _iconAdded;
     private bool _disposed;
 
@@ -88,6 +104,9 @@ public sealed class TrayIconController : IDisposable
         _vm = vm;
 
         _hIcon = CreateTrayIconHandle();
+        _ownsIcon = _hIcon != IntPtr.Zero;
+        if (_hIcon == IntPtr.Zero)
+            _hIcon = LoadIconW(IntPtr.Zero, IDI_APPLICATION); // never add an image-less (invisible) entry
         CreateMessageWindow();
         AddTrayIcon();
 
@@ -108,10 +127,20 @@ public sealed class TrayIconController : IDisposable
         };
         _source = new HwndSource(parameters);
         _source.AddHook(WndProc);
+
+        _taskbarCreatedMsg = RegisterWindowMessageW("TaskbarCreated");
+        ChangeWindowMessageFilterEx(_source.Handle, _taskbarCreatedMsg, MSGFLT_ALLOW, IntPtr.Zero);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == _taskbarCreatedMsg && _taskbarCreatedMsg != 0)
+        {
+            // Explorer restarted and wiped the tray: put the icon back.
+            AddTrayIcon();
+            return IntPtr.Zero;
+        }
+
         if (msg != (int)WM_APP_TRAY)
             return IntPtr.Zero;
 
@@ -297,28 +326,12 @@ public sealed class TrayIconController : IDisposable
         using var ms = new MemoryStream();
         encoder.Save(ms);
 
-        var ico = WrapPngAsIco(ms.ToArray(), 32, 32);
-        return CreateIconFromResourceEx(ico, (uint)ico.Length, fIcon: true,
+        // CreateIconFromResourceEx takes raw icon resource bits; for PNG that is the PNG itself.
+        // (Wrapping it in an .ico file header makes the call fail and return NULL, which left
+        // the tray entry with no image, so nothing was visible.)
+        var png = ms.ToArray();
+        return CreateIconFromResourceEx(png, (uint)png.Length, fIcon: true,
             dwVer: 0x00030000, 32, 32, flags: 0);
-    }
-
-    private static byte[] WrapPngAsIco(byte[] png, int width, int height)
-    {
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        bw.Write((short)0);          // reserved
-        bw.Write((short)1);          // type: icon
-        bw.Write((short)1);          // image count
-        bw.Write((byte)width);
-        bw.Write((byte)height);
-        bw.Write((byte)0);           // palette
-        bw.Write((byte)0);           // reserved
-        bw.Write((short)1);          // color planes
-        bw.Write((short)32);         // bits per pixel
-        bw.Write(png.Length);
-        bw.Write(22);                // data offset (6 + 16-byte entry)
-        bw.Write(png);
-        return ms.ToArray();
     }
 
     private static Point GetCursorPositionDip()
@@ -345,11 +358,9 @@ public sealed class TrayIconController : IDisposable
             _iconAdded = false;
         }
 
-        if (_hIcon != IntPtr.Zero)
-        {
+        if (_hIcon != IntPtr.Zero && _ownsIcon)
             DestroyIcon(_hIcon);
-            _hIcon = IntPtr.Zero;
-        }
+        _hIcon = IntPtr.Zero;
 
         _source?.RemoveHook(WndProc);
         _source?.Dispose();
