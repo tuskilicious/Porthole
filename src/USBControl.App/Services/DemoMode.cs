@@ -61,6 +61,15 @@ public static class DemoMode
         Render(window, stem + "-wide.png");
         window.Width = 1240;
 
+        // The last tiles of each hub, scrolled into view.
+        if (FindScrollViewer(window) is { } scroller)
+        {
+            scroller.ScrollToEnd();
+            await Task.Delay(700);
+            Render(window, stem + "-scrolled.png");
+            scroller.ScrollToHome();
+        }
+
         // Panel-layout mode under another accent palette.
         Accents.Apply("Violet");
         controller.IsPanelMode = true;
@@ -84,6 +93,19 @@ public static class DemoMode
         }
 
         Application.Current.Shutdown();
+    }
+
+    private static System.Windows.Controls.ScrollViewer? FindScrollViewer(DependencyObject root)
+    {
+        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is System.Windows.Controls.ScrollViewer { IsVisible: true, ScrollableHeight: > 0 } sv)
+                return sv;
+            if (FindScrollViewer(child) is { } found)
+                return found;
+        }
+        return null;
     }
 
     private static System.Windows.Controls.Expander? FindExpander(DependencyObject root)
@@ -261,8 +283,8 @@ public static class DemoMode
         var ctor = busType.GetConstructors().Single(c => c.GetParameters().Length == 1);
         var hubArray = Array.CreateInstance(
             ctor.GetParameters()[0].ParameterType.GetElementType()!, 2);
-        hubArray.SetValue(("Rear USB 3.2 Gen2", 6), 0);
-        hubArray.SetValue(("Front panel", 6), 1);
+        hubArray.SetValue(("Rear USB 3.2 Gen2", 8), 0);
+        hubArray.SetValue(("Front panel", 9), 1);
         var bus = ctor.Invoke(new[] { hubArray })!;
 
         // FakeDeviceSpec initializers via reflection on the record's init-only props.
@@ -315,6 +337,11 @@ public static class DemoMode
         Plug(Spec("0781", "5581", "SanDisk Ultra Flair", className: "DiskDrive",
             children: Array.Empty<string>()), "HUB01#6");
 
+        // 7  racing wheel, 8  Wi-Fi adapter (exercise the wheel and network icons)
+        Plug(Spec("046D", "C24F", "G29 Racing Wheel", children: new[] { "HID" }), "HUB01#7");
+        Plug(Spec("0BDA", "8812", "Wi-Fi Adapter", className: "Net",
+            children: Array.Empty<string>()), "HUB01#8");
+
         // ---- Front hub: everything else ----------------------------------------
         // 1  a second controller (serial-less — moves would re-enumerate, like real hardware)
         Plug(Spec("054C", "05C4", "Wireless Controller", children: new[] { "HID" }), "HUB02#1");
@@ -329,7 +356,13 @@ public static class DemoMode
         // 5  downstream hub: gets the Hub chip and no switch
         Plug(Spec("05E3", "0610", "USB2.0 Hub", className: "USB",
             children: Array.Empty<string>(), isHub: true), "HUB02#5");
-        // 6  empty (dashed outline)
+        // 6  wireless receiver, 7  microphone, 8  phone (dongle, microphone and phone icons)
+        Plug(Spec("046D", "C52B", "USB Receiver", children: new[] { "HID" }), "HUB02#6");
+        Plug(Spec("0D8C", "0014", "Studio Microphone", className: "MEDIA",
+            children: Array.Empty<string>()), "HUB02#7");
+        Plug(Spec("18D1", "4EE1", "Pixel 8", className: "WPD",
+            children: Array.Empty<string>()), "HUB02#8");
+        // 9  empty (dashed outline)
         return bus;
     }
 }
