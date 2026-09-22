@@ -16,6 +16,8 @@
   <svc:BoolToVisibilityConverter x:Key="BoolToVis" />
   <svc:BoolToVisibilityConverter x:Key="InverseBoolToVis" Inverse="True" />
   <svc:KindToGeometryConverter x:Key="KindToGeometry" />
+  <svc:KindToPeripheralIconConverter x:Key="KindToPeripheralIcon" />
+  <svc:KindToPeripheralIconConverter x:Key="KindHasNoPeripheralIcon" Inverse="True" />
   <svc:InverseBoolConverter x:Key="InverseBool" />
   <svc:NullToVisibilityConverter x:Key="NullToVis" />
 
@@ -60,7 +62,14 @@
         <Ellipse Fill="{StaticResource RaisedBrush}" />
         <Ellipse Fill="{DynamicResource AccentTintBrush}" />
         <Ellipse Stroke="{StaticResource BorderBrush}" StrokeThickness="1" />
-        <Path Style="{StaticResource TileGlyph}" />
+        <!-- default peripheral icon (Porthole icon pack) when the device's kind has one;
+             otherwise the vector glyph below -->
+        <Image Source="{Binding DeviceKind, Converter={StaticResource KindToPeripheralIcon}}"
+               Visibility="{Binding DeviceKind, Converter={StaticResource KindToPeripheralIcon}}"
+               Width="{StaticResource TypeGlyphSize}" Height="{StaticResource TypeGlyphSize}"
+               Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+        <Path Style="{StaticResource TileGlyph}"
+              Visibility="{Binding DeviceKind, Converter={StaticResource KindHasNoPeripheralIcon}}" />
       </Grid>
 
       <Grid Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}">

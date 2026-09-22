@@ -440,6 +440,62 @@ public sealed class KindToGeometryConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+/// <summary>
+/// Device kind → its default peripheral icon (the Porthole icon pack), for kinds the pack covers.
+/// Several kinds share one drawing: any game-input device (controller/joystick/wheel) reads as
+/// "gamepad", and anything recognized-but-not-illustrated (dongle/network) reads as the pack's
+/// own generic-device stand-in, "cable". Kinds the pack doesn't cover (hub, unknown, empty) fall
+/// through to the vector glyph (TileGlyph/KindToGeometryConverter) instead — Convert returns null,
+/// and the target-type check lets one converter instance drive both the Image's Source (null hides
+/// it) and the fallback Path's Visibility (Inverse for the "show the vector glyph instead" case).
+/// </summary>
+public sealed class KindToPeripheralIconConverter : IValueConverter
+{
+    private static readonly Dictionary<string, string> AssetByKind = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["mouse"] = "mouse",
+        ["keyboard"] = "keyboard",
+        ["headset"] = "headphones",
+        ["webcam"] = "webcam",
+        ["controller"] = "gamepad",
+        ["joystick"] = "gamepad",
+        ["wheel"] = "gamepad",
+        ["storage"] = "flashdrive",
+        ["printer"] = "printer",
+        ["microphone"] = "microphone",
+        ["phone"] = "phone",
+        ["dongle"] = "cable",
+        ["network"] = "cable",
+    };
+
+    private static readonly ConcurrentDictionary<string, ImageSource> Cache = new();
+
+    /// <summary>Inverted for the fallback vector glyph: visible only when there is no peripheral icon.</summary>
+    public bool Inverse { get; set; }
+
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        var icon = value is string kind && AssetByKind.TryGetValue(kind, out var asset) ? Load(asset) : null;
+
+        if (targetType == typeof(Visibility))
+        {
+            var show = Inverse ? icon is null : icon is not null;
+            return show ? Visibility.Visible : Visibility.Collapsed;
+        }
+        return icon;
+    }
+
+    private static ImageSource Load(string asset) => Cache.GetOrAdd(asset, static a =>
+    {
+        var bmp = new BitmapImage(new Uri($"pack://application:,,,/Assets/peripherals/{a}.png"));
+        bmp.Freeze();
+        return bmp;
+    });
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>Negates a bool (two-way), so one setting can drive two mutually exclusive radio buttons.</summary>
 public sealed class InverseBoolConverter : IValueConverter
 {
