@@ -499,12 +499,22 @@ public sealed class KindToGeometryConverter : IValueConverter
 
 /// <summary>
 /// Device kind → its default peripheral icon (the Porthole icon pack), for kinds the pack covers.
-/// Several kinds share one drawing: any game-input device (controller/joystick/wheel) reads as
-/// "gamepad", and anything recognized-but-not-illustrated (dongle/network) reads as the pack's
-/// own generic-device stand-in, "cable". Kinds the pack doesn't cover (hub, unknown, empty) fall
-/// through to the vector glyph (TileGlyph/KindToGeometryConverter) instead — Convert returns null,
-/// and the target-type check lets one converter instance drive both the Image's Source (null hides
-/// it) and the fallback Path's Visibility (Inverse for the "show the vector glyph instead" case).
+/// A game controller reads as "gamepad"; a flight stick or wheel reads as "joystick" (the pack
+/// has no dedicated wheel drawing, and joystick is the closer visual match); a Bluetooth/USB
+/// dongle and a network adapter both read as "cable"/"router" respectively; mass storage always
+/// reads as "flashdrive" (nothing in UsbDeviceInfo distinguishes a fixed drive from removable
+/// media, so this can't be split further without new detection). Kinds the pack doesn't cover
+/// (hub, unknown, empty) fall through to the vector glyph (TileGlyph/KindToGeometryConverter)
+/// instead — Convert returns null, and the target-type check lets one converter instance drive
+/// both the Image's Source (null hides it) and the fallback Path's Visibility (Inverse for the
+/// "show the vector glyph instead" case).
+///
+/// Each asset exists in two stroke colors, one per theme, for contrast against the icon well's
+/// own circle background (dark in the Dark theme, light in the Light theme): "cream" (light
+/// stroke) and "ink" (dark stroke). Convert reads <see cref="ThemeMode.CurrentName"/> at call
+/// time to pick the folder — this only updates when something re-evaluates the binding (a theme
+/// switch alone does not), which is why switching themes also asks AppController to rebuild its
+/// tiles (see ThemeMode.Apply's callers).
 /// </summary>
 public sealed class KindToPeripheralIconConverter : IValueConverter
 {
@@ -515,14 +525,14 @@ public sealed class KindToPeripheralIconConverter : IValueConverter
         ["headset"] = "headphones",
         ["webcam"] = "webcam",
         ["controller"] = "gamepad",
-        ["joystick"] = "gamepad",
-        ["wheel"] = "gamepad",
+        ["joystick"] = "joystick",
+        ["wheel"] = "joystick",
         ["storage"] = "flashdrive",
         ["printer"] = "printer",
         ["microphone"] = "microphone",
         ["phone"] = "phone",
         ["dongle"] = "cable",
-        ["network"] = "cable",
+        ["network"] = "router",
     };
 
     private static readonly ConcurrentDictionary<string, ImageSource> Cache = new();
@@ -542,12 +552,16 @@ public sealed class KindToPeripheralIconConverter : IValueConverter
         return icon;
     }
 
-    private static ImageSource Load(string asset) => Cache.GetOrAdd(asset, static a =>
+    private static ImageSource Load(string asset)
     {
-        var bmp = new BitmapImage(new Uri($"pack://application:,,,/Assets/peripherals/{a}.png"));
-        bmp.Freeze();
-        return bmp;
-    });
+        var variant = ThemeMode.CurrentName.Equals("Light", StringComparison.OrdinalIgnoreCase) ? "ink" : "cream";
+        return Cache.GetOrAdd($"{variant}/{asset}", static key =>
+        {
+            var bmp = new BitmapImage(new Uri($"pack://application:,,,/Assets/peripherals/{key}.png"));
+            bmp.Freeze();
+            return bmp;
+        });
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
         throw new NotSupportedException();

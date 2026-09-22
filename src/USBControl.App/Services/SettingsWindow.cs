@@ -92,6 +92,7 @@ public static class SettingsWindow
             {
                 pendingTheme = tm.Name;
                 ThemeMode.Apply(tm.Name); // instant preview across the whole app
+                controller.RefreshFromSettings(); // rebuilds tiles so peripheral icons pick up the new variant
                 if (Application.Current?.MainWindow is { } main)
                     DarkTitleBar.Apply(main);
                 foreach (Button other in themeRow.Children)
@@ -160,6 +161,7 @@ public static class SettingsWindow
             s.ShowHiddenPorts = chkHidden.IsChecked == true;
             s.MinimizeToTray = chkTray.IsChecked != false;
             s.Accent = pendingAccent;
+            s.Theme = pendingTheme;
             SetAutostart(chkAutostart.IsChecked == true);
             s.StartWithWindows = chkAutostart.IsChecked == true;
             controller.Store.Save();
@@ -169,6 +171,8 @@ public static class SettingsWindow
         cancel.Click += (_, _) =>
         {
             Accents.Apply(s.Accent); // undo the live preview
+            ThemeMode.Apply(s.Theme);
+            controller.RefreshFromSettings();
             win.Close();
         };
 

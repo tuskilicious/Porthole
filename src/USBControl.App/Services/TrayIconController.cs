@@ -288,15 +288,17 @@ public sealed class TrayIconController : IDisposable
     // ---------------- icon rendering (Porthole brand mark) ----------------
 
     /// <summary>
-    /// Loads the packaged 32x32 tray-icon PNG and hands its raw bytes straight to
-    /// CreateIconFromResourceEx, which expects raw icon resource bits (for PNG, that is the PNG
-    /// itself — wrapping it in an .ico file header makes the call fail and return NULL, leaving
-    /// the tray entry with no image). Fixed brand colors: the tray glyph does not re-tint with
-    /// the user's chosen accent palette, matching how most apps keep their logo mark constant.
+    /// Loads the packaged 24x24 tray-icon PNG — the brand kit's purpose-simplified small mark,
+    /// not a scaled-down copy of the full detailed one, which doesn't hold up at tray size — and
+    /// hands its raw bytes straight to CreateIconFromResourceEx, which expects raw icon resource
+    /// bits (for PNG, that is the PNG itself — wrapping it in an .ico file header makes the call
+    /// fail and return NULL, leaving the tray entry with no image). Fixed brand colors: the tray
+    /// glyph does not re-tint with the user's chosen accent palette or theme, matching how most
+    /// apps keep their logo mark constant.
     /// </summary>
     private static IntPtr CreateTrayIconHandle()
     {
-        var uri = new Uri("pack://application:,,,/Assets/porthole-tray-32.png");
+        var uri = new Uri("pack://application:,,,/Assets/porthole-tray-24.png");
         using var stream = Application.GetResourceStream(uri)?.Stream;
         if (stream is null)
             return IntPtr.Zero;
@@ -305,7 +307,7 @@ public sealed class TrayIconController : IDisposable
         stream.CopyTo(ms);
         var png = ms.ToArray();
         return CreateIconFromResourceEx(png, (uint)png.Length, fIcon: true,
-            dwVer: 0x00030000, 32, 32, flags: 0);
+            dwVer: 0x00030000, 24, 24, flags: 0);
     }
 
     private static Point GetCursorPositionDip()

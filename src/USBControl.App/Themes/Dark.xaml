@@ -21,15 +21,18 @@
     <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
   </Style>
 
-  <!-- heading: app title, hub headers, editor headers -->
+  <!-- section headings: hub headers, editor header, front/rear-panel titles. Plain UI font —
+       the brand wordmark font is reserved for the wordmark itself (see AppTitle below). -->
   <Style x:Key="Heading" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource FontHeading}" />
+    <Setter Property="FontFamily" Value="{StaticResource FontBody}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeHeading}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
+  <!-- the "PORTHOLE" wordmark: sidebar/toolbar mark and the splash screen only. -->
   <Style x:Key="AppTitle" TargetType="TextBlock" BasedOn="{StaticResource Heading}">
+    <Setter Property="FontFamily" Value="{StaticResource FontHeading}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
   </Style>
 

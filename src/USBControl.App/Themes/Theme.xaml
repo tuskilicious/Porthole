@@ -37,10 +37,17 @@
   <!-- tile drop-shadow color: always black at a theme-tuned opacity (TileShadowOpacity*) -->
   <Color x:Key="ShadowColor">#FF000000</Color>
 
-  <!-- Sidebar and status-banner chrome (MainWindow.xaml) stay Ink regardless of theme —
-       a deliberately two-tone layout, not swapped by ThemeMode.cs. -->
+  <!-- The four Porthole brand constants. Ink/Cream are the sidebar/status-banner chrome
+       (MainWindow.xaml) that stays constant regardless of theme — a deliberately two-tone
+       layout, not swapped by ThemeMode.cs. Cream is also ThemeMode.Light's Bg value; that copy
+       is a plain C# literal (XAML resources aren't reachable from there) and must be kept in
+       sync with CreamColor by hand if either ever changes. Tangerine/Mint live in Accents.cs /
+       ProfileActiveColor below, not here, since Tangerine is swappable (Accents.All) and Mint is
+       reserved for the active-profile/powered-on indicator only — see that field's own comment. -->
   <Color x:Key="InkColor">#FF131519</Color>
   <SolidColorBrush x:Key="InkBrush" Color="{StaticResource InkColor}" />
+  <Color x:Key="CreamColor">#FFF4F1EA</Color>
+  <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource CreamColor}" />
   <Color x:Key="TextOnInkColor">#FFF4F1EA</Color>
   <SolidColorBrush x:Key="TextOnInkBrush" Color="{StaticResource TextOnInkColor}" />
   <Color x:Key="TextOnInkMutedColor">#FF8B897F</Color>
@@ -51,10 +58,13 @@
   <!-- ===================== typography ===================== -->
 
   <FontFamily x:Key="FontBody">Segoe UI Variable, Segoe UI</FontFamily>
-  <!-- Porthole brand fonts (Bricolage Grotesque / Space Mono); both fall through to the
-       previous choices when not installed, since the kit ships no font files to embed. -->
+  <!-- The brand wordmark font — used ONLY for the "PORTHOLE" text itself (sidebar/toolbar mark
+       and the splash screen), never as a general heading font; every other heading uses FontBody.
+       Falls through when not installed, since the kit ships no font file to embed. -->
   <FontFamily x:Key="FontHeading">Bricolage Grotesque, Bricolage Grotesque SemiBold, Bahnschrift SemiBold, Segoe UI Semibold</FontFamily>
-  <FontFamily x:Key="FontMono">Space Mono, Cascadia Mono, Consolas</FontFamily>
+  <!-- VID:PID / serial / port-ID text. Cascadia Mono ships with Windows Terminal, VS and VS Code,
+       so it's a much more likely install than Space Mono, which nothing bundles. -->
+  <FontFamily x:Key="FontMono">Cascadia Mono, Consolas</FontFamily>
 
   <sys:Double x:Key="FontSizeTitle">15</sys:Double>
   <sys:Double x:Key="FontSizeName">16</sys:Double>

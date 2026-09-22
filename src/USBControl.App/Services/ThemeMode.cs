@@ -71,10 +71,15 @@ public static class ThemeMode
     public static Palette Resolve(string? name) =>
         All.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) ?? Dark;
 
+    /// <summary>The palette last passed to <see cref="Apply"/> — read by anything that can't use
+    /// DynamicResource (e.g. KindToPeripheralIconConverter picking an icon variant file).</summary>
+    public static string CurrentName { get; private set; } = Dark.Name;
+
     /// <summary>Applies the named palette (startup + live switching). Unknown names fall back to Dark.</summary>
     public static void Apply(string? name)
     {
         var p = Resolve(name);
+        CurrentName = p.Name;
         var dict = new ResourceDictionary();
 
         void Brush(string key, Color c)

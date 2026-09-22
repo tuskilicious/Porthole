@@ -21,11 +21,14 @@
 
   <ItemGroup>
     <Resource Include="Assets\porthole.ico" />
-    <Resource Include="Assets\porthole-tray-32.png" />
+    <Resource Include="Assets\porthole-tray-24.png" />
     <Resource Include="Assets\porthole-mark.png" />
-    <!-- Default per-device-type icons (Porthole peripheral icon pack, transparent-cream variant),
-         shown in the icon well before the user assigns a photo. -->
-    <Resource Include="Assets\peripherals\*.png" />
+    <!-- Default per-device-type icons (Porthole peripheral icon pack, transparent glyph over the
+         icon well's own circle background), shown before the user assigns a photo. One set per
+         theme for contrast: cream (light stroke) for the Dark theme's dark well, ink (dark
+         stroke) for the Light theme's light well — see ThemeMode.CurrentName. -->
+    <Resource Include="Assets\peripherals\cream\*.png" />
+    <Resource Include="Assets\peripherals\ink\*.png" />
   </ItemGroup>
 
   <ItemGroup>
