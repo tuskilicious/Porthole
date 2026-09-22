@@ -15,6 +15,7 @@ public partial class MainWindow : Window
         var vm = new MainWindowViewModel(App.Controller)
         {
             ProfileNamePrompt = name => Prompt.Show(this, name, "Profile name", $"My setup {DateTime.Now:yyyy-MM-dd HH:mm}"),
+            ProfileNotePrompt = title => Prompt.Show(this, title, "Description", ""),
         };
         DataContext = vm;
 

@@ -257,8 +257,41 @@ public sealed class PortViewModel : INotifyPropertyChanged
 
     public string InstanceId => Entry.Device?.InstanceId is { Length: > 0 } id ? id : "—";
 
-    /// <summary>"Rear USB 3.2 Gen2 · port 3".</summary>
-    public string HubPortText => $"{HubName} · port {Entry.PortNumber}";
+    /// <summary>"USB 2.0 Full-speed" etc., from the negotiated connection speed. "—" when unknown.</summary>
+    public string SpeedText => Entry.Device is { } d ? SpeedToText(d.Speed) : "—";
+
+    private static string SpeedToText(byte speed) => speed switch
+    {
+        0 => "USB 1.0 Low-speed",
+        1 => "USB 1.1 Full-speed",
+        2 => "USB 2.0 High-speed",
+        3 => "USB 3.x SuperSpeed",
+        _ => "—",
+    };
+
+    /// <summary>"Rear USB 3.2 Gen2 · port 3", with "(front panel)"/"(rear panel)" appended
+    /// once the port has been assigned a zone.</summary>
+    public string HubPortText
+    {
+        get
+        {
+            var text = $"{HubName} · port {Entry.PortNumber}";
+            var zone = Controller.Store.GetOrCreatePort(Entry.PortKey).Zone;
+            return zone is { Length: > 0 } ? $"{text} ({zone.ToLowerInvariant()} panel)" : text;
+        }
+    }
+
+    /// <summary>True while this port is assigned to the front-panel grid.</summary>
+    public bool IsFrontPanel
+    {
+        get => Controller.Store.GetOrCreatePort(Entry.PortKey).Zone == "Front";
+        set
+        {
+            Controller.TogglePortZone(Entry);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HubPortText));
+        }
+    }
 
     public string DetailsText =>
         $"VID:PID  {VidPid}\nSerial   {SerialText}\nInstance {InstanceId}\nHub/port {HubPortText}";
@@ -413,6 +446,18 @@ public sealed class BoolToVisibilityConverter : IValueConverter
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>Two strings equal (ordinal, case-insensitive) → true; used by the sidebar profile
+/// card to compare its own Name against Controller.ActiveProfile ("Live" state).</summary>
+public sealed class StringEqualsConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        values.Length == 2 && values[0] is string a && values[1] is string b
+            && a.Equals(b, StringComparison.OrdinalIgnoreCase);
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object? parameter, System.Globalization.CultureInfo culture) =>
         throw new NotSupportedException();
 }
 

@@ -20,6 +20,7 @@ public class AppStoreTests : IDisposable
         var port = store.GetOrCreatePort("HUB1#3");
         port.Label = "Rear bottom left";
         port.Hidden = true;
+        port.Zone = "Front";
         store.Save();
 
         var store2 = MakeStore();
@@ -29,6 +30,7 @@ public class AppStoreTests : IDisposable
         Assert.Equal("main pad", store2.Data.Devices["VID_045E&PID_0B12"].Note);
         Assert.Equal("Rear bottom left", store2.Data.Ports["HUB1#3"].Label);
         Assert.True(store2.Data.Ports["HUB1#3"].Hidden);
+        Assert.Equal("Front", store2.Data.Ports["HUB1#3"].Zone);
     }
 
     [Fact]

@@ -61,6 +61,11 @@ public sealed partial class AppController : ObservableObject, IDisposable
     public Func<string, string, bool>? Confirm { get; set; }
     public ObservableCollection<HubGroupViewModel> Hubs { get; } = new();
     public ObservableCollection<PortViewModel> PanelPorts { get; } = new();
+
+    /// <summary>Ports the user marked as physically on the case's front panel (see
+    /// <see cref="TogglePortZone"/>) — shown in their own small fixed grid instead of
+    /// the hub-grouped list or the free-form Panel Layout canvas.</summary>
+    public ObservableCollection<PortViewModel> FrontPanelPorts { get; } = new();
     public ObservableCollection<Profile> ProfileList { get; } = new();
 
     public AppController(AppStore store, ITopologyService topology, IDevicePowerService power)
@@ -238,6 +243,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
         {
             Hubs.Clear();
             PanelPorts.Clear();
+            FrontPanelPorts.Clear();
             var shownNow = new HashSet<string>();
             var hubIndex = 0;
             foreach (var hub in _snapshot.Hubs)
@@ -250,10 +256,18 @@ public sealed partial class AppController : ObservableObject, IDisposable
                         shownNow.Add(deviceKey);
                     var portVm = new PortViewModel(this, port,
                         appeared: deviceKey is not null && !_shownDevices.Contains(deviceKey));
-                    vm.Ports.Add(portVm);
-                    PanelPorts.Add(portVm);
+                    if (Store.GetOrCreatePort(port.PortKey).Zone == "Front")
+                    {
+                        FrontPanelPorts.Add(portVm);
+                    }
+                    else
+                    {
+                        vm.Ports.Add(portVm);
+                        PanelPorts.Add(portVm);
+                    }
                 }
-                Hubs.Add(vm);
+                if (vm.Ports.Count > 0)
+                    Hubs.Add(vm);
             }
 
             _shownDevices = shownNow;
@@ -285,7 +299,30 @@ public sealed partial class AppController : ObservableObject, IDisposable
                 && cls is "USB" or "SCSIAdapter" or "Net" or "DiskDrive" or "WPD")
                 return false;
         }
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var haystack = $"{meta.Label} {port.Device?.DisplayName} {port.Device?.HardwareId} {port.Device?.Serial} {port.Device?.InstanceId}";
+            if (!haystack.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
         return true;
+    }
+
+    private string _searchText = "";
+
+    /// <summary>Free-text sidebar search: filters every view (hub-grouped, panel layout,
+    /// front panel) by port label, device name, VID/PID/serial or instance id.</summary>
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText == value) return;
+            _searchText = value;
+            OnPropertyChanged();
+            _ = RefreshAsync();
+        }
     }
 
     private void RunOnUi(Action action)
@@ -360,6 +397,15 @@ public sealed partial class AppController : ObservableObject, IDisposable
     {
         var meta = Store.GetOrCreatePort(port.PortKey);
         meta.Hidden = !meta.Hidden;
+        Store.Save();
+        _ = RefreshAsync();
+    }
+
+    /// <summary>Flips a port between the front-panel grid and the normal hub/panel-layout view.</summary>
+    public void TogglePortZone(PortEntry port)
+    {
+        var meta = Store.GetOrCreatePort(port.PortKey);
+        meta.Zone = meta.Zone == "Front" ? "" : "Front";
         Store.Save();
         _ = RefreshAsync();
     }

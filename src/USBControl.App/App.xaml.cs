@@ -78,14 +78,17 @@ public partial class App : Application
             return;
         }
 
-        var splash = SplashWindow.Create();
-        splash.Show();
-
         var store = IsDemoMode
             ? new AppStore(Path.Combine(Path.GetTempPath(), "USBControl-demo"))
             : new AppStore();
         store.Load();
+        ThemeMode.Apply(store.Data.Settings.Theme);
         Accents.Apply(store.Data.Settings.Accent);
+
+        // The splash needs the theme/accent resources above to already be in place —
+        // its background/text/mark all come from those dictionaries.
+        var splash = SplashWindow.Create();
+        splash.Show();
 
         ITopologyService topology;
         IDevicePowerService power;

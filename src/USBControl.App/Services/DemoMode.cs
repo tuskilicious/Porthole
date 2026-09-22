@@ -61,6 +61,15 @@ public static class DemoMode
         Render(window, stem + "-wide.png");
         window.Width = 1240;
 
+        // The Light theme, back at the normal window size — a regression check for
+        // ThemeMode.cs, alongside the always-Dark screenshots above.
+        ThemeMode.Apply("Light");
+        window.UpdateLayout();
+        await Task.Delay(600);
+        Render(window, stem + "-light.png");
+        ThemeMode.Apply("Dark");
+        window.UpdateLayout();
+
         // The last tiles of each hub, scrolled into view.
         if (FindScrollViewer(window) is { } scroller)
         {

@@ -3,93 +3,50 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
   <!-- ============================================================================
-       THEME.XAML — the single source of truth for every color, brush, spacing
-       value, corner radius, size and font in the app UI. Nothing else in the app
-       hard-codes a value; Controls (Dark.xaml), Tiles.xaml and the windows only
-       reference the keys below.
+       THEME.XAML — the single source of truth for every spacing value, corner
+       radius, size and font in the app UI, plus the few colors that never change
+       per theme. Nothing else in the app hard-codes a value; Controls (Dark.xaml),
+       Tiles.xaml and the windows only reference the keys below.
 
        Design rule: color is for meaning only.
          accent    = on / selected (live, swapped per palette by Accents.cs)
          green     = connected        amber = warning        red = error ONLY
 
-       Accent resources (AccentBrush / AccentSoftBrush (20%) / AccentLineBrush (40%) /
-       AccentDimBrush / AccentGlowBrush / AccentGlowEffect / AccentGlowStrongEffect)
-       are rebuilt frozen on every palette switch. WPF forbids DynamicResource inside
-       Freezables, so consumers reference them with DynamicResource on a property
-       or setter only — never inside a brush or effect.
+       Base-palette colors/brushes (Bg/Surface/Raised/Border/BorderStrong/Text*/
+       Good/Warn/Bad/*Soft/Toggle/Tile*) are NOT declared here — they're built and
+       swapped at runtime by Services/ThemeMode.cs (Dark/Light), the same technique
+       Accents.cs already uses for the accent palette. Accent resources (AccentBrush
+       / AccentSoftBrush (20%) / AccentLineBrush (40%) / AccentDimBrush /
+       AccentGlowBrush / AccentGlowEffect / AccentGlowStrongEffect) are rebuilt
+       frozen on every palette switch. WPF forbids DynamicResource inside
+       Freezables (a GradientStop's Color, an Effect, a DrawingBrush's fill), so
+       anything that needs to vary by theme and lives inside one of those is built
+       as a complete, already-frozen brush/effect in code and referenced with
+       DynamicResource only at the top-level property — never nested inside
+       another brush or effect declared in XAML.
        ============================================================================ -->
 
-  <!-- ===================== colors ===================== -->
+  <!-- ===================== colors that never change per theme ===================== -->
 
-  <!-- surfaces -->
-  <Color x:Key="BgColor">#FF0B0D10</Color>
-  <Color x:Key="SurfaceColor">#FF14171C</Color>
-  <Color x:Key="RaisedColor">#FF1B1F26</Color>
-  <Color x:Key="BorderColor">#FF252A33</Color>
-  <Color x:Key="BorderStrongColor">#FF363D49</Color>
-
-  <!-- text -->
-  <Color x:Key="TextPrimaryColor">#FFE8EAED</Color>
-  <Color x:Key="TextDimColor">#FF9AA3AE</Color>
-  <Color x:Key="TextMutedColor">#FF5F6873</Color>
-  <Color x:Key="TextOnAccentColor">#FF0B0D10</Color>
-
-  <!-- status (device state only, never chrome) -->
-  <Color x:Key="GoodColor">#FF3DD68C</Color>
-
-  <!-- Porthole brand: mint, reserved ONLY for "this profile is active" — never reused as a
-       general status color, even though it sits near GoodColor on the wheel. -->
+  <!-- Porthole brand: mint, reserved ONLY for "this profile is active" in the Dark
+       theme (never reused as a general status color there); the Light theme has
+       its own, broader mint convention — see ThemeMode.cs. -->
   <Color x:Key="ProfileActiveColor">#FF46E3A0</Color>
-  <Color x:Key="WarnColor">#FFF5A524</Color>
-  <Color x:Key="BadColor">#FFF0506E</Color>
+  <SolidColorBrush x:Key="ProfileActiveBrush" Color="{StaticResource ProfileActiveColor}" />
 
-  <!-- status chip fills: state color at ~14% over the surface -->
-  <Color x:Key="GoodSoftColor">#243DD68C</Color>
-  <Color x:Key="WarnSoftColor">#24F5A524</Color>
-  <Color x:Key="BadSoftColor">#24F0506E</Color>
-  <Color x:Key="NeutralSoftColor">#18FFFFFF</Color>
-
-  <!-- tile depth: a faint vertical gradient (raised a touch on hover), a 6% top highlight, soft shadow -->
-  <Color x:Key="TileTopColor">#FF161A20</Color>
-  <Color x:Key="TileBottomColor">#FF12151A</Color>
-  <Color x:Key="TileTopHoverColor">#FF1D222A</Color>
-  <Color x:Key="TileBottomHoverColor">#FF171B21</Color>
-  <Color x:Key="TileHighlightColor">#0FFFFFFF</Color>
+  <!-- tile drop-shadow color: always black at a theme-tuned opacity (TileShadowOpacity*) -->
   <Color x:Key="ShadowColor">#FF000000</Color>
 
-  <!-- toggle switch: on = live accent, off = muted gray -->
-  <Color x:Key="ToggleOffColor">#FF3A414C</Color>
-
-  <!-- ===================== brushes ===================== -->
-
-  <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
-  <SolidColorBrush x:Key="RaisedBrush" Color="{StaticResource RaisedColor}" />
-  <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
-  <SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource BorderStrongColor}" />
-
-  <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextPrimaryColor}" />
-  <SolidColorBrush x:Key="TextDimBrush" Color="{StaticResource TextDimColor}" />
-  <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
-  <SolidColorBrush x:Key="TextOnAccentBrush" Color="{StaticResource TextOnAccentColor}" />
-
-  <SolidColorBrush x:Key="GoodBrush" Color="{StaticResource GoodColor}" />
-  <SolidColorBrush x:Key="ProfileActiveBrush" Color="{StaticResource ProfileActiveColor}" />
-  <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource WarnColor}" />
-  <SolidColorBrush x:Key="BadBrush" Color="{StaticResource BadColor}" />
-  <SolidColorBrush x:Key="GoodSoftBrush" Color="{StaticResource GoodSoftColor}" />
-  <SolidColorBrush x:Key="WarnSoftBrush" Color="{StaticResource WarnSoftColor}" />
-  <SolidColorBrush x:Key="BadSoftBrush" Color="{StaticResource BadSoftColor}" />
-  <SolidColorBrush x:Key="NeutralSoftBrush" Color="{StaticResource NeutralSoftColor}" />
-
-  <SolidColorBrush x:Key="ToggleOffBrush" Color="{StaticResource ToggleOffColor}" />
-
-  <!-- 1px inner highlight along the top edge of a tile, fading out at both ends -->
-  <LinearGradientBrush x:Key="TileHighlightBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="#00FFFFFF" Offset="0" />
-    <GradientStop Color="{StaticResource TileHighlightColor}" Offset="0.5" />
-    <GradientStop Color="#00FFFFFF" Offset="1" />
-  </LinearGradientBrush>
+  <!-- Sidebar and status-banner chrome (MainWindow.xaml) stay Ink regardless of theme —
+       a deliberately two-tone layout, not swapped by ThemeMode.cs. -->
+  <Color x:Key="InkColor">#FF131519</Color>
+  <SolidColorBrush x:Key="InkBrush" Color="{StaticResource InkColor}" />
+  <Color x:Key="TextOnInkColor">#FFF4F1EA</Color>
+  <SolidColorBrush x:Key="TextOnInkBrush" Color="{StaticResource TextOnInkColor}" />
+  <Color x:Key="TextOnInkMutedColor">#FF8B897F</Color>
+  <SolidColorBrush x:Key="TextOnInkMutedBrush" Color="{StaticResource TextOnInkMutedColor}" />
+  <SolidColorBrush x:Key="SidebarCardBrush" Color="#14FFFFFF" />
+  <SolidColorBrush x:Key="SidebarCardBorderBrush" Color="#1FFFFFFF" />
 
   <!-- ===================== typography ===================== -->
 
@@ -157,6 +114,8 @@
   <sys:Double x:Key="StatusbarHeight">32</sys:Double>
   <sys:Double x:Key="EditorWidth">340</sys:Double>
   <sys:Double x:Key="EditorRailWidth">44</sys:Double>
+  <sys:Double x:Key="SidebarWidth">300</sys:Double>
+  <sys:Double x:Key="StatusBannerHeight">56</sys:Double>
 
   <!-- responsive grid: tiles stretch to fill each row, never narrower than the minimum -->
   <sys:Double x:Key="TileMinWidth">280</sys:Double>
@@ -213,16 +172,9 @@
   <sys:Double x:Key="TileShadowDepthHover">6</sys:Double>
   <sys:Double x:Key="TileShadowOpacityHover">0.55</sys:Double>
 
-  <!-- dotted blueprint grid behind the panel-layout canvas -->
-  <DrawingBrush x:Key="PanelGridBrush" TileMode="Tile" ViewportUnits="Absolute" Viewport="0,0,24,24"
-                ViewboxUnits="Absolute" Viewbox="0,0,24,24">
-    <DrawingBrush.Drawing>
-      <GeometryDrawing Brush="{StaticResource BorderBrush}">
-        <GeometryDrawing.Geometry>
-          <RectangleGeometry Rect="0,0,1.5,1.5" />
-        </GeometryDrawing.Geometry>
-      </GeometryDrawing>
-    </DrawingBrush.Drawing>
-  </DrawingBrush>
+  <!-- PanelGridBrush (the dotted blueprint grid behind the panel-layout canvas) is
+       built per-theme by ThemeMode.cs, not declared here — its dot color is
+       BorderColor, which is itself theme-swapped, and a GeometryDrawing.Brush is a
+       Freezable that cannot take a DynamicResource (see the header note above). -->
 
 </ResourceDictionary>

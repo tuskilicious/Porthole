@@ -79,6 +79,10 @@ public sealed class PortMeta
     public string PortKey { get; set; } = "";
     public string Label { get; set; } = "";
     public bool Hidden { get; set; }
+
+    /// <summary>"" (unset, the default free-form/hub view) or "Front" — a port physically
+    /// on the case's front panel, shown in its own small fixed grid instead.</summary>
+    public string Zone { get; set; } = "";
 }
 
 /// <summary>Position of a port tile on the free-form panel (mirrors the case's rear layout).</summary>

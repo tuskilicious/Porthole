@@ -38,7 +38,7 @@ jobs:
           $p = Start-Process publish\Porthole.exe -ArgumentList '--demo','--screenshot',"$PWD\shots\ui.png" -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'demo mode did not finish within 2 minutes' }
 
-          $expected = 'ui','ui-editor-empty','ui-selected','ui-wide','ui-panel','ui-nodevices','ui-settings'
+          $expected = 'ui','ui-editor-empty','ui-selected','ui-wide','ui-light','ui-panel','ui-nodevices','ui-settings'
           $missing = $expected | Where-Object { -not (Test-Path "shots\$_.png") }
           if ($missing) { throw "missing screenshots: $($missing -join ', ')" }
 

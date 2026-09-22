@@ -15,7 +15,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public Func<string, string?>? ProfileNamePrompt { get; set; }
 
+    /// <summary>Optional short description shown under the profile's name in the sidebar
+    /// (e.g. "Stick · Throttle · Rudder · 6…"). Skipped silently if left blank.</summary>
+    public Func<string, string?>? ProfileNotePrompt { get; set; }
+
     public ObservableCollection<Profile> ProfileList => Controller.ProfileList;
+
+    public string MachineName => Environment.MachineName;
 
     public PortViewModel? SelectedPort
     {
@@ -113,7 +119,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             // field isn't interrupted by the refresh that a rename triggers.
             if (e.PropertyName == nameof(AppController.Hubs) && SelectedPort is { } sel)
             {
-                var fresh = Controller.Hubs.SelectMany(h => h.Ports)
+                var fresh = Controller.Hubs.SelectMany(h => h.Ports).Concat(Controller.FrontPanelPorts)
                     .FirstOrDefault(vm => vm.PortKey == sel.PortKey);
                 if (fresh is not null)
                     fresh.IsSelected = true;
@@ -143,7 +149,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var name = ProfileNamePrompt?.Invoke("Save current state as profile");
         if (string.IsNullOrWhiteSpace(name))
             return;
-        Controller.CaptureProfile(name.Trim());
+        var profile = Controller.CaptureProfile(name.Trim());
+
+        var note = ProfileNotePrompt?.Invoke("Describe this profile (optional)");
+        if (!string.IsNullOrWhiteSpace(note))
+        {
+            profile.Note = note.Trim();
+            Controller.Store.Save();
+        }
+
         SelectedProfile = Controller.ProfileList
             .FirstOrDefault(p => p.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase));
     }

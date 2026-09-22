@@ -73,6 +73,34 @@ public static class SettingsWindow
             swatchRow.Children.Add(swatch);
         }
 
+        // --- theme (Dark/Light) — same instant-preview/Cancel-revert pattern as the accent ---
+        var pendingTheme = s.Theme;
+        var themeRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = Gap(S8()) };
+        foreach (var mode in ThemeMode.All)
+        {
+            var tm = mode;
+            var swatch = new Button
+            {
+                Content = tm.Name,
+                Width = 92,
+                Height = SwatchSize(),
+                Margin = new Thickness(0, 0, S8(), 0),
+                BorderThickness = new Thickness(2),
+                BorderBrush = tm.Name.Equals(pendingTheme, StringComparison.OrdinalIgnoreCase) ? Text() : Brushes.Transparent,
+            };
+            swatch.Click += (_, _) =>
+            {
+                pendingTheme = tm.Name;
+                ThemeMode.Apply(tm.Name); // instant preview across the whole app
+                if (Application.Current?.MainWindow is { } main)
+                    DarkTitleBar.Apply(main);
+                foreach (Button other in themeRow.Children)
+                    other.BorderBrush = ReferenceEquals(other.Tag, tm) ? Text() : Brushes.Transparent;
+            };
+            swatch.Tag = tm;
+            themeRow.Children.Add(swatch);
+        }
+
         var ok = new Button
         {
             Content = "Save", Width = 92, IsDefault = true, Margin = new Thickness(0, S24(), S8(), 0),
@@ -97,6 +125,9 @@ public static class SettingsWindow
         panel.Children.Add(SectionLabel("BEHAVIOR"));
         panel.Children.Add(chkAutostart);
         panel.Children.Add(chkTray);
+
+        panel.Children.Add(SectionLabel("THEME"));
+        panel.Children.Add(themeRow);
 
         panel.Children.Add(SectionLabel("ACCENT"));
         panel.Children.Add(swatchRow);

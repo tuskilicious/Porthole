@@ -25,17 +25,17 @@
   <Style x:Key="TileGlyph" TargetType="Path" BasedOn="{StaticResource IconPath}">
     <Setter Property="Width" Value="{StaticResource TypeGlyphSize}" />
     <Setter Property="Height" Value="{StaticResource TypeGlyphSize}" />
-    <Setter Property="Stroke" Value="{StaticResource TextDimBrush}" />
+    <Setter Property="Stroke" Value="{DynamicResource TextDimBrush}" />
     <Setter Property="Data" Value="{Binding DeviceKind, Converter={StaticResource KindToGeometry}}" />
     <Style.Triggers>
       <DataTrigger Binding="{Binding IsSelected}" Value="True">
         <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
       </DataTrigger>
       <DataTrigger Binding="{Binding IsDisabled}" Value="True">
-        <Setter Property="Stroke" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
       </DataTrigger>
       <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-        <Setter Property="Stroke" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
       </DataTrigger>
     </Style.Triggers>
   </Style>
@@ -59,9 +59,9 @@
     <Grid Width="{StaticResource IconWellSize}" Height="{StaticResource IconWellSize}">
 
       <Grid Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}">
-        <Ellipse Fill="{StaticResource RaisedBrush}" />
+        <Ellipse Fill="{DynamicResource RaisedBrush}" />
         <Ellipse Fill="{DynamicResource AccentTintBrush}" />
-        <Ellipse Stroke="{StaticResource BorderBrush}" StrokeThickness="1" />
+        <Ellipse Stroke="{DynamicResource BorderBrush}" StrokeThickness="1" />
         <!-- default peripheral icon (Porthole icon pack) when the device's kind has one;
              otherwise the vector glyph below -->
         <Image Source="{Binding DeviceKind, Converter={StaticResource KindToPeripheralIcon}}"
@@ -92,7 +92,7 @@
     <DataTemplate.Triggers>
       <DataTrigger Binding="{Binding IsDisabled}" Value="True">
         <Setter TargetName="grayPhoto" Property="Visibility" Value="Visible" />
-        <Setter TargetName="ring" Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+        <Setter TargetName="ring" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
       </DataTrigger>
     </DataTemplate.Triggers>
   </DataTemplate>
@@ -104,15 +104,15 @@
   <DataTemplate x:Key="StatusChip">
     <Grid x:Name="chipRoot" HorizontalAlignment="Left" ToolTip="{Binding StatusTooltip}">
       <Border x:Name="chip" CornerRadius="{StaticResource RadiusChip}"
-              Background="{StaticResource NeutralSoftBrush}" />
+              Background="{DynamicResource NeutralSoftBrush}" />
       <!-- error pulse: a red wash that breathes under the label (2s cycle) -->
       <Border x:Name="pulse" CornerRadius="{StaticResource RadiusChip}"
-              Background="{StaticResource BadBrush}" Opacity="0" IsHitTestVisible="False" />
+              Background="{DynamicResource BadBrush}" Opacity="0" IsHitTestVisible="False" />
       <StackPanel Orientation="Horizontal" Margin="{StaticResource ChipPadding}">
         <Grid Width="{StaticResource SpinnerSize}" Height="{StaticResource SpinnerSize}" Margin="0,0,6,0"
               VerticalAlignment="Center">
           <Ellipse x:Name="dot" Width="{StaticResource ChipDotSize}" Height="{StaticResource ChipDotSize}"
-                   Fill="{StaticResource TextMutedBrush}" />
+                   Fill="{DynamicResource TextMutedBrush}" />
           <Ellipse x:Name="spinner" Style="{StaticResource ChipSpinner}" Visibility="Collapsed">
             <Ellipse.RenderTransform>
               <RotateTransform x:Name="spinnerTurn" Angle="0" />
@@ -121,7 +121,7 @@
         </Grid>
         <TextBlock x:Name="label" Text="{Binding StateText, NotifyOnTargetUpdated=True}"
                    FontSize="{StaticResource FontSizeChip}"
-                   FontWeight="SemiBold" Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center" />
+                   FontWeight="SemiBold" Foreground="{DynamicResource TextDimBrush}" VerticalAlignment="Center" />
       </StackPanel>
     </Grid>
     <DataTemplate.Triggers>
@@ -137,20 +137,20 @@
       </EventTrigger>
 
       <DataTrigger Binding="{Binding StatusKind}" Value="connected">
-        <Setter TargetName="chip" Property="Background" Value="{StaticResource GoodSoftBrush}" />
-        <Setter TargetName="dot" Property="Fill" Value="{StaticResource GoodBrush}" />
-        <Setter TargetName="label" Property="Foreground" Value="{StaticResource GoodBrush}" />
+        <Setter TargetName="chip" Property="Background" Value="{DynamicResource GoodSoftBrush}" />
+        <Setter TargetName="dot" Property="Fill" Value="{DynamicResource GoodBrush}" />
+        <Setter TargetName="label" Property="Foreground" Value="{DynamicResource GoodBrush}" />
       </DataTrigger>
       <DataTrigger Binding="{Binding StatusKind}" Value="hub">
-        <Setter TargetName="dot" Property="Fill" Value="{StaticResource GoodBrush}" />
+        <Setter TargetName="dot" Property="Fill" Value="{DynamicResource GoodBrush}" />
       </DataTrigger>
       <DataTrigger Binding="{Binding StatusKind}" Value="disabled">
-        <Setter TargetName="label" Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter TargetName="label" Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       </DataTrigger>
       <DataTrigger Binding="{Binding StatusKind}" Value="error">
-        <Setter TargetName="chip" Property="Background" Value="{StaticResource BadSoftBrush}" />
-        <Setter TargetName="dot" Property="Fill" Value="{StaticResource BadBrush}" />
-        <Setter TargetName="label" Property="Foreground" Value="{StaticResource BadBrush}" />
+        <Setter TargetName="chip" Property="Background" Value="{DynamicResource BadSoftBrush}" />
+        <Setter TargetName="dot" Property="Fill" Value="{DynamicResource BadBrush}" />
+        <Setter TargetName="label" Property="Foreground" Value="{DynamicResource BadBrush}" />
         <DataTrigger.EnterActions>
           <BeginStoryboard x:Name="pulseSb">
             <Storyboard RepeatBehavior="Forever" AutoReverse="True">
@@ -206,20 +206,19 @@
           <MouseBinding Gesture="LeftClick" Command="{Binding OpenEditorCommand}" />
         </Grid.InputBindings>
 
+        <!-- Background is a whole, pre-built brush from ThemeMode.cs (TileFillBrush/
+             TileFillHoverBrush) — a GradientStop.Color cannot itself take a DynamicResource,
+             so the vertical fill gradient is built in code per theme and swapped whole on hover
+             by the Setter below, instead of animating individual GradientStop colors. -->
         <Border x:Name="card" CornerRadius="{StaticResource RadiusTile}" Padding="{StaticResource TilePadding}"
-                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                Background="{DynamicResource TileFillBrush}">
           <Border.Effect>
             <DropShadowEffect x:Name="shadow" Color="{StaticResource ShadowColor}" Direction="270"
                               BlurRadius="{StaticResource TileShadowBlur}"
                               ShadowDepth="{StaticResource TileShadowDepth}"
                               Opacity="{StaticResource TileShadowOpacity}" />
           </Border.Effect>
-          <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-              <GradientStop x:Name="fillTop" Color="{StaticResource TileTopColor}" Offset="0" />
-              <GradientStop x:Name="fillBottom" Color="{StaticResource TileBottomColor}" Offset="1" />
-            </LinearGradientBrush>
-          </Border.Background>
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="*" />
@@ -265,12 +264,12 @@
                            TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
                            LineHeight="{StaticResource NameLineHeight}" LineStackingStrategy="BlockLineHeight"
                            MaxHeight="{StaticResource NameMaxHeight}"
-                           Foreground="{StaticResource TextBrush}">
+                           Foreground="{DynamicResource TextBrush}">
                   <TextBlock.Style>
                     <Style TargetType="TextBlock">
                       <Style.Triggers>
                         <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                          <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                          <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
                         </DataTrigger>
                       </Style.Triggers>
                     </Style>
@@ -278,7 +277,7 @@
                 </TextBlock>
                 <TextBlock Text="{Binding PortCaption}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
                            FontFamily="{StaticResource FontMono}" FontSize="{StaticResource FontSizeMicro}"
-                           Foreground="{StaticResource TextMutedBrush}" />
+                           Foreground="{DynamicResource TextMutedBrush}" />
               </StackPanel>
 
               <ToggleButton x:Name="toggle" Grid.Column="2" Style="{StaticResource ToggleSwitch}"
@@ -297,7 +296,7 @@
 
         <!-- 1px inner highlight along the top edge -->
         <Border x:Name="highlight" Height="1" VerticalAlignment="Top" Margin="12,1,12,0"
-                Background="{StaticResource TileHighlightBrush}" IsHitTestVisible="False" />
+                Background="{DynamicResource TileHighlightBrush}" IsHitTestVisible="False" />
 
         <!-- active-state edge: accent while enabled, red on error -->
         <Border x:Name="edge" Width="3" HorizontalAlignment="Left" Margin="0,14"
@@ -305,11 +304,11 @@
                 Visibility="Collapsed" IsHitTestVisible="False" />
 
         <!-- empty port: dim the card and outline it with a dashed border -->
-        <Border x:Name="emptyCover" CornerRadius="{StaticResource RadiusTile}" Background="{StaticResource BgBrush}"
+        <Border x:Name="emptyCover" CornerRadius="{StaticResource RadiusTile}" Background="{DynamicResource BgBrush}"
                 Opacity="0.55" IsHitTestVisible="False"
                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
         <Rectangle x:Name="dash" RadiusX="{StaticResource RadiusTileValue}" RadiusY="{StaticResource RadiusTileValue}"
-                   Stroke="{StaticResource BorderStrongBrush}" StrokeThickness="1" StrokeDashArray="4 3"
+                   Stroke="{DynamicResource BorderStrongBrush}" StrokeThickness="1" StrokeDashArray="4 3"
                    IsHitTestVisible="False"
                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
 
@@ -324,6 +323,9 @@
 
     <DataTemplate.Triggers>
       <Trigger SourceName="root" Property="IsMouseOver" Value="True">
+        <!-- instant brush swap (see the Background comment above); everything else
+             still animates smoothly -->
+        <Setter TargetName="card" Property="Background" Value="{DynamicResource TileFillHoverBrush}" />
         <Trigger.EnterActions>
           <BeginStoryboard>
             <Storyboard>
@@ -341,10 +343,6 @@
               <DoubleAnimation Storyboard.TargetName="shadow" Storyboard.TargetProperty="Opacity"
                                To="{StaticResource TileShadowOpacityHover}" Duration="{StaticResource MotionFast}"
                                EasingFunction="{StaticResource EaseOut}" />
-              <ColorAnimation Storyboard.TargetName="fillTop" Storyboard.TargetProperty="Color"
-                              To="{StaticResource TileTopHoverColor}" Duration="{StaticResource MotionFast}" />
-              <ColorAnimation Storyboard.TargetName="fillBottom" Storyboard.TargetProperty="Color"
-                              To="{StaticResource TileBottomHoverColor}" Duration="{StaticResource MotionFast}" />
             </Storyboard>
           </BeginStoryboard>
         </Trigger.EnterActions>
@@ -364,10 +362,6 @@
               <DoubleAnimation Storyboard.TargetName="shadow" Storyboard.TargetProperty="Opacity"
                                To="{StaticResource TileShadowOpacity}" Duration="{StaticResource MotionFast}"
                                EasingFunction="{StaticResource EaseOut}" />
-              <ColorAnimation Storyboard.TargetName="fillTop" Storyboard.TargetProperty="Color"
-                              To="{StaticResource TileTopColor}" Duration="{StaticResource MotionFast}" />
-              <ColorAnimation Storyboard.TargetName="fillBottom" Storyboard.TargetProperty="Color"
-                              To="{StaticResource TileBottomColor}" Duration="{StaticResource MotionFast}" />
             </Storyboard>
           </BeginStoryboard>
         </Trigger.ExitActions>
@@ -379,7 +373,7 @@
       </DataTrigger>
       <DataTrigger Binding="{Binding IsProblem}" Value="True">
         <Setter TargetName="edge" Property="Visibility" Value="Visible" />
-        <Setter TargetName="edge" Property="Background" Value="{StaticResource BadBrush}" />
+        <Setter TargetName="edge" Property="Background" Value="{DynamicResource BadBrush}" />
         <Setter TargetName="toggle" Property="Opacity" Value="0.4" />
       </DataTrigger>
 
