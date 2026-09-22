@@ -45,14 +45,20 @@ public static class DemoMode
         await Task.Delay(600);
         Render(window, Path.ChangeExtension(path, null) + "-editor-empty.png");
 
-        vm.SelectedPort = controller.PanelPorts.FirstOrDefault(p =>
+        vm.SelectedPort = controller.PanelPorts.Concat(controller.FrontPanelPorts).FirstOrDefault(p =>
             p.Device?.HardwareId.Contains("PID_0B12", StringComparison.OrdinalIgnoreCase) == true);
         window.UpdateLayout();
-        if (FindExpander(window) is { } details)
-            details.IsExpanded = true;
         await Task.Delay(2000);
         var stem = Path.ChangeExtension(path, null);
         Render(window, stem + "-selected.png");
+
+        // The Light theme, at the normal window size — a regression check for ThemeMode.cs,
+        // alongside the always-Dark screenshots here. Captured before the window is ever
+        // resized (see the "wide" stage below), which otherwise leaves a stale render size.
+        ThemeMode.Apply("Light");
+        await Task.Delay(600);
+        Render(window, stem + "-light.png");
+        ThemeMode.Apply("Dark");
 
         // A wide window: tiles should add columns and still fill the row.
         window.Width = 1900;
@@ -60,15 +66,6 @@ public static class DemoMode
         await Task.Delay(1200);
         Render(window, stem + "-wide.png");
         window.Width = 1240;
-
-        // The Light theme, back at the normal window size — a regression check for
-        // ThemeMode.cs, alongside the always-Dark screenshots above.
-        ThemeMode.Apply("Light");
-        window.UpdateLayout();
-        await Task.Delay(600);
-        Render(window, stem + "-light.png");
-        ThemeMode.Apply("Dark");
-        window.UpdateLayout();
 
         // The last tiles of each hub, scrolled into view.
         if (FindScrollViewer(window) is { } scroller)
@@ -88,6 +85,7 @@ public static class DemoMode
         // No devices at all.
         controller.IsPanelMode = false;
         controller.Hubs.Clear();
+        controller.FrontPanelPorts.Clear();
         await Task.Delay(600);
         Render(window, stem + "-nodevices.png");
 
@@ -112,19 +110,6 @@ public static class DemoMode
             if (child is System.Windows.Controls.ScrollViewer { IsVisible: true, ScrollableHeight: > 0 } sv)
                 return sv;
             if (FindScrollViewer(child) is { } found)
-                return found;
-        }
-        return null;
-    }
-
-    private static System.Windows.Controls.Expander? FindExpander(DependencyObject root)
-    {
-        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
-            if (child is System.Windows.Controls.Expander e)
-                return e;
-            if (FindExpander(child) is { } found)
                 return found;
         }
         return null;
@@ -224,7 +209,7 @@ public static class DemoMode
         {
             if (e.PropertyName != nameof(AppController.Hubs))
                 return;
-            var port = controller.PanelPorts.FirstOrDefault(p =>
+            var port = controller.PanelPorts.Concat(controller.FrontPanelPorts).FirstOrDefault(p =>
                 p.Device?.HardwareId.Contains("PID_0B12", StringComparison.OrdinalIgnoreCase) == true);
             if (port is null)
                 return;

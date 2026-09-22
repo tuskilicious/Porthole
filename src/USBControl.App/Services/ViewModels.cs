@@ -449,15 +449,27 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         throw new NotSupportedException();
 }
 
-/// <summary>Two strings equal (ordinal, case-insensitive) → true; used by the sidebar profile
-/// card to compare its own Name against Controller.ActiveProfile ("Live" state).</summary>
+/// <summary>Two strings equal (ordinal, case-insensitive) → Visible; used by the sidebar
+/// profile card to compare its own Name against Controller.ActiveProfile ("Live" pill).</summary>
 public sealed class StringEqualsConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
         values.Length == 2 && values[0] is string a && values[1] is string b
-            && a.Equals(b, StringComparison.OrdinalIgnoreCase);
+            && a.Equals(b, StringComparison.OrdinalIgnoreCase)
+            ? Visibility.Visible : Visibility.Collapsed;
 
     public object[] ConvertBack(object value, Type[] targetTypes, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>An int/collection Count > 0 → Visible; used for sections that only show up once
+/// something is in them (e.g. the front-panel grid).</summary>
+public sealed class CountToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        value is int n && n > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
         throw new NotSupportedException();
 }
 

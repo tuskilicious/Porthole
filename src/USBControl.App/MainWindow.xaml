@@ -2,424 +2,561 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svc="clr-namespace:USBControl.App.Services"
-        Title="Porthole" Height="760" Width="1240" MinHeight="600" MinWidth="1040"
+        Title="Porthole" Height="800" Width="1400" MinHeight="640" MinWidth="1100"
         Icon="Assets/porthole.ico"
         Style="{StaticResource {x:Type Window}}">
 
   <!-- All colors, sizes, fonts and radii come from Themes/Theme.xaml; the port tile and
-       status chip live in Themes/Tiles.xaml; control styles in Themes/Dark.xaml. -->
+       status chip live in Themes/Tiles.xaml; control styles in Themes/Dark.xaml. The
+       sidebar and status banner are always Ink chrome (InkBrush/TextOnInkBrush), not
+       swapped by ThemeMode.cs — a deliberately two-tone layout in both themes. -->
 
-  <Grid>
-  <!-- a very faint accent bloom behind the top-left, so the window is not dead flat -->
-  <Rectangle Fill="{DynamicResource AccentBackdropBrush}" IsHitTestVisible="False" />
+  <Window.Resources>
+    <svc:StringEqualsConverter x:Key="NamesEqual" />
+    <svc:CountToVisibilityConverter x:Key="CountToVis" />
+  </Window.Resources>
 
   <DockPanel>
 
-    <!-- ===================== toolbar (56px) ===================== -->
-    <Border DockPanel.Dock="Top" Height="{StaticResource ToolbarHeight}"
-            Background="{DynamicResource SurfaceBrush}" Padding="{StaticResource ToolbarPadding}"
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <DockPanel>
+    <!-- ===================== sidebar ===================== -->
+    <Border DockPanel.Dock="Left" Width="{StaticResource SidebarWidth}" Background="{StaticResource InkBrush}">
+      <DockPanel Margin="20">
 
-        <!-- right: profiles -->
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-          <!-- brand mint, reserved for this one indicator: the profile currently applied -->
-          <Border Background="{DynamicResource NeutralSoftBrush}" CornerRadius="{StaticResource RadiusPill}"
-                  Padding="10,5" Margin="0,0,8,0"
-                  Visibility="{Binding Controller.ActiveProfile, Converter={StaticResource NullToVis}}">
-            <StackPanel Orientation="Horizontal">
-              <Ellipse Width="{StaticResource ChipDotSize}" Height="{StaticResource ChipDotSize}"
-                       Fill="{StaticResource ProfileActiveBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <TextBlock Foreground="{StaticResource ProfileActiveBrush}" FontSize="{StaticResource FontSizeChip}"
-                         FontWeight="SemiBold" VerticalAlignment="Center">
-                <Run Text="ACTIVE" /> <Run Text="{Binding Controller.ActiveProfile, Mode=OneWay}" />
-              </TextBlock>
-            </StackPanel>
-          </Border>
-          <ComboBox x:Name="ProfileBox" ItemsSource="{Binding Controller.ProfileList}"
-                    SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name"
-                    Tag="Select profile..." Width="{StaticResource ProfileBoxWidth}" />
-          <Button Content="Apply" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}"
-                  Command="{Binding ApplyProfileCommand}" />
-          <Button Content="Save as..." Margin="8,0,0,0" Command="{Binding CaptureProfileCommand}" />
-          <Button Style="{StaticResource IconButton}" Margin="4,0,0,0"
-                  Command="{Binding DeleteProfileCommand}" ToolTip="Delete selected profile">
-            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconTrash}" />
-          </Button>
-        </StackPanel>
-
-        <!-- left: brand, view filters, actions -->
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <!-- brand mark: fixed tangerine, independent of the user's chosen accent palette -->
+        <!-- brand -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
           <Image Source="pack://application:,,,/Assets/porthole-mark.png"
-                 Width="{StaticResource ToolbarGlyphSize}" Height="{StaticResource ToolbarGlyphSize}"
-                 Stretch="Uniform" VerticalAlignment="Center" />
-          <TextBlock Text="PORTHOLE" Style="{StaticResource AppTitle}" Margin="10,0,0,0" />
+                 Width="32" Height="32" Stretch="Uniform" VerticalAlignment="Center" />
+          <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+            <TextBlock Text="PORTHOLE" FontFamily="{StaticResource FontHeading}"
+                       FontSize="{StaticResource FontSizeTitle}" FontWeight="Bold"
+                       Foreground="{StaticResource TextOnInkBrush}" />
+            <TextBlock Text="{Binding MachineName}" FontFamily="{StaticResource FontMono}"
+                       FontSize="{StaticResource FontSizeMicro}"
+                       Foreground="{StaticResource TextOnInkMutedBrush}" />
+          </StackPanel>
+        </StackPanel>
 
-          <Border Width="1" Height="24" Background="{DynamicResource BorderBrush}" Margin="20,0" />
+        <!-- Ports / Layout tabs — both drive the same IsPanelMode toggle the topbar's
+             Panel-layout button does (see ResponsiveTilePanel vs. free-form canvas below). -->
+        <Border DockPanel.Dock="Top" Margin="0,20,0,0" Background="{StaticResource SidebarCardBrush}"
+                CornerRadius="{StaticResource RadiusControl}" Padding="3">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <RadioButton Style="{StaticResource SegmentRadio}" Content="Ports" HorizontalAlignment="Stretch"
+                         HorizontalContentAlignment="Center" Foreground="{StaticResource TextOnInkBrush}"
+                         IsChecked="{Binding Controller.IsPanelMode, Converter={StaticResource InverseBool}}" />
+            <RadioButton Grid.Column="1" Style="{StaticResource SegmentRadio}" Content="Layout" HorizontalAlignment="Stretch"
+                         HorizontalContentAlignment="Center" Foreground="{StaticResource TextOnInkBrush}"
+                         IsChecked="{Binding Controller.IsPanelMode}" />
+          </Grid>
+        </Border>
 
-          <!-- scope: exactly one of the two is selected -->
-          <Border Background="{DynamicResource BgBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                  BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3">
+        <!-- tray quick-swap reminder -->
+        <Border DockPanel.Dock="Bottom" Margin="0,16,0,0" Padding="12" CornerRadius="{StaticResource RadiusControl}"
+                Background="{StaticResource SidebarCardBrush}" BorderBrush="{StaticResource SidebarCardBorderBrush}"
+                BorderThickness="1">
+          <StackPanel>
             <StackPanel Orientation="Horizontal">
-              <RadioButton Style="{StaticResource SegmentRadio}" Content="Controllers"
-                           IsChecked="{Binding Controller.ShowAllDevices, Converter={StaticResource InverseBool}}"
-                           ToolTip="Show controllers, HID devices and hubs only" />
-              <RadioButton Style="{StaticResource SegmentRadio}" Content="All devices" Margin="2,0,0,0"
-                           IsChecked="{Binding Controller.ShowAllDevices}"
-                           ToolTip="Show every USB device" />
+              <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="TRAY QUICK-SWAP" Margin="8,0,0,0" FontWeight="SemiBold"
+                         FontSize="{StaticResource FontSizeChip}" Foreground="{StaticResource TextOnInkBrush}" />
             </StackPanel>
-          </Border>
-
-          <!-- independent filters -->
-          <ToggleButton Style="{StaticResource ChipToggle}" Content="Empty ports" Margin="12,0,0,0"
-                        IsChecked="{Binding Controller.ShowEmptyPorts}"
-                        ToolTip="Show ports with nothing plugged in" />
-          <ToggleButton Style="{StaticResource ChipToggle}" Content="Hidden" Margin="8,0,0,0"
-                        IsChecked="{Binding Controller.ShowHiddenPorts}"
-                        ToolTip="Show ports you hid" />
-
-          <Border Width="1" Height="24" Background="{DynamicResource BorderBrush}" Margin="20,0" />
-
-          <Button Style="{StaticResource ToolbarIconButton}" Command="{Binding RefreshCommand}"
-                  ToolTip="Refresh">
-            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconRefresh}" />
-          </Button>
-          <ToggleButton Style="{StaticResource ToolbarIconToggle}" Margin="8,0,0,0"
-                        IsChecked="{Binding Controller.IsPanelMode}"
-                        ToolTip="Panel layout: drag tiles to mirror the physical ports on your case">
-            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconPanel}" />
-          </ToggleButton>
-          <Button Content="Reset layout" Margin="8,0,0,0" Command="{Binding ResetPanelLayoutCommand}"
-                  ToolTip="Forget all dragged positions"
-                  Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource BoolToVis}}" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <!-- ===================== summary band ===================== -->
-    <Border DockPanel.Dock="Top" Padding="{StaticResource StatBandPadding}"
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <DockPanel>
-        <!-- safety escape hatch: only shown while something is disabled -->
-        <Button DockPanel.Dock="Right" Content="Enable all disabled" VerticalAlignment="Center"
-                Command="{Binding EnableAllCommand}"
-                ToolTip="Re-enable every device that is currently disabled">
-          <Button.Style>
-            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-              <Style.Triggers>
-                <DataTrigger Binding="{Binding Controller.DisabledCount}" Value="0">
-                  <Setter Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-              </Style.Triggers>
-            </Style>
-          </Button.Style>
-        </Button>
-      <StackPanel Orientation="Horizontal">
-        <StackPanel Margin="0,0,32,0" MinWidth="72">
-          <TextBlock Text="{Binding Controller.DeviceCount}" Style="{StaticResource StatValue}" />
-          <TextBlock Text="D&#x200A;E&#x200A;V&#x200A;I&#x200A;C&#x200A;E&#x200A;S" Style="{StaticResource StatLabel}" />
-        </StackPanel>
-        <Border Width="1" Height="36" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center" />
-        <StackPanel Margin="32,0,32,0" MinWidth="72">
-          <TextBlock Text="{Binding Controller.EnabledCount}" Style="{StaticResource StatValue}" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="E&#x200A;N&#x200A;A&#x200A;B&#x200A;L&#x200A;E&#x200A;D" Style="{StaticResource StatLabel}" />
-        </StackPanel>
-        <Border Width="1" Height="36" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center" />
-        <StackPanel Margin="32,0,32,0" MinWidth="72">
-          <TextBlock Text="{Binding Controller.DisabledCount}" Style="{StaticResource StatValue}" />
-          <TextBlock Text="D&#x200A;I&#x200A;S&#x200A;A&#x200A;B&#x200A;L&#x200A;E&#x200A;D" Style="{StaticResource StatLabel}" />
-        </StackPanel>
-        <Border Width="1" Height="36" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center" />
-        <StackPanel Margin="32,0,32,0" MinWidth="72">
-          <TextBlock Text="{Binding Controller.HubCount}" Style="{StaticResource StatValue}" />
-          <TextBlock Text="H&#x200A;U&#x200A;B&#x200A;S" Style="{StaticResource StatLabel}" />
-        </StackPanel>
-      </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <!-- ===================== status bar (32px) ===================== -->
-    <Border DockPanel.Dock="Bottom" Height="{StaticResource StatusbarHeight}"
-            Background="{DynamicResource SurfaceBrush}" Padding="{StaticResource StatusbarPadding}"
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
-      <DockPanel>
-        <Button DockPanel.Dock="Right" Padding="10,3" FontSize="{StaticResource FontSizeSecondary}"
-                Command="{Binding OpenSettingsCommand}" VerticalAlignment="Center" ToolTip="Open settings">
-          <StackPanel Orientation="Horizontal">
-            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconSettings}"
-                  Width="14" Height="14" Margin="0,0,6,0" />
-            <TextBlock Text="Settings" />
+            <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="{StaticResource FontSizeMeta}"
+                       Foreground="{StaticResource TextOnInkMutedBrush}"
+                       Text="Right-click the tray keyhole to swap profiles without opening the app." />
           </StackPanel>
-        </Button>
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <Ellipse Style="{StaticResource BusySpinner}" Margin="0,0,8,0" />
-          <TextBlock Text="{Binding StatusText}" Style="{StaticResource MutedText}" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
+        </Border>
 
-    <!-- ===================== main content ===================== -->
-    <Grid>
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="Auto" />
-      </Grid.ColumnDefinitions>
-
-      <!-- grouped view: one section per hub, tiles fill the row -->
-      <ScrollViewer Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto"
-                    Padding="{StaticResource PagePadding}"
-                    Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource InverseBoolToVis}}">
-        <StackPanel>
-          <ItemsControl ItemsSource="{Binding Controller.Hubs}" Focusable="False">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <StackPanel Margin="{StaticResource SectionGap}">
-                  <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="Auto" />
-                      <ColumnDefinition Width="Auto" />
-                      <ColumnDefinition Width="Auto" />
-                      <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Style="{StaticResource AccentBar}" />
-                    <TextBlock Grid.Column="1" Text="{Binding HubHeader}" Style="{StaticResource Heading}"
-                               ToolTip="{Binding DisplayName}" Margin="10,0,0,0" />
-                    <TextBlock Grid.Column="2" Text="{Binding UsageText}" Style="{StaticResource MutedText}"
-                               Margin="12,0,0,0" />
-                    <!-- hairline rule running to the right edge -->
-                    <Border Grid.Column="3" Height="1" Background="{DynamicResource BorderBrush}"
-                            VerticalAlignment="Center" Margin="16,0,0,0" />
-                  </Grid>
-                  <ItemsControl ItemsSource="{Binding Ports}" Focusable="False">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate>
-                        <svc:ResponsiveTilePanel MinTileWidth="{StaticResource TileMinWidth}"
-                                                 MaxTileWidth="{StaticResource TileMaxWidth}"
-                                                 GapX="{StaticResource Space12}" GapY="{StaticResource Space12}" />
-                      </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PortTile}"
-                                        Focusable="False" />
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <!-- no devices at all -->
-          <StackPanel HorizontalAlignment="Center" Margin="0,80,0,0"
-                      Visibility="{Binding HasNoHubs, Converter={StaticResource BoolToVis}}">
-            <Grid Width="{StaticResource EmptyStateRingSize}" Height="{StaticResource EmptyStateRingSize}"
-                  HorizontalAlignment="Center">
-              <Ellipse Stroke="{DynamicResource BorderStrongBrush}" StrokeThickness="1.5" StrokeDashArray="3 4" />
-              <Ellipse Margin="14" Fill="{DynamicResource AccentTintBrush}" />
-              <Path Data="{StaticResource IconEmpty}" Style="{StaticResource IconPath}"
-                    Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.4"
-                    Width="{StaticResource EmptyStateGlyphSize}" Height="{StaticResource EmptyStateGlyphSize}"
-                    Opacity="0.7" />
-            </Grid>
-            <TextBlock Text="No devices found - try Refresh" FontSize="{StaticResource FontSizeTitle}"
-                       FontWeight="SemiBold" Foreground="{DynamicResource TextDimBrush}"
-                       HorizontalAlignment="Center" Margin="0,20,0,0" />
-          </StackPanel>
-        </StackPanel>
-      </ScrollViewer>
-
-      <!-- panel view: free-form rear-panel layout -->
-      <Grid Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource BoolToVis}}">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <TextBlock Margin="24,16,16,0" Style="{StaticResource FieldLabel}"
-                   Text="Drag tiles to mirror your case's rear panel. The layout is saved automatically." />
-
-        <ScrollViewer Grid.Row="1" Style="{StaticResource OverlayScrollViewer}"
-                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                      Padding="{StaticResource PagePadding}">
-          <Canvas Width="{StaticResource PanelCanvasWidth}" Height="{StaticResource PanelCanvasHeight}"
-                  Background="{DynamicResource PanelGridBrush}">
-            <ItemsControl ItemsSource="{Binding Controller.PanelPorts}" Focusable="False">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <Canvas />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemContainerStyle>
-                <Style TargetType="ContentPresenter">
-                  <Setter Property="Canvas.Left" Value="{Binding LayoutX}" />
-                  <Setter Property="Canvas.Top" Value="{Binding LayoutY}" />
-                  <Setter Property="Width" Value="{StaticResource TileWidthFixed}" />
-                </Style>
-              </ItemsControl.ItemContainerStyle>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <ContentControl Content="{Binding}" svc:PanelDrag.Enabled="True" Focusable="False"
-                                  ContentTemplate="{StaticResource PortTile}" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </Canvas>
-        </ScrollViewer>
-      </Grid>
-
-      <!-- ===================== device editor (340px, collapsible) ===================== -->
-
-      <!-- collapsed: a slim rail with the expand button -->
-      <Border Grid.Column="1" Width="{StaticResource EditorRailWidth}"
-              Background="{DynamicResource SurfaceBrush}"
-              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
-              Visibility="{Binding IsEditorOpen, Converter={StaticResource InverseBoolToVis}}">
-        <Button Style="{StaticResource IconButton}" VerticalAlignment="Top" Margin="0,8,0,0"
-                Command="{Binding ToggleEditorCommand}" ToolTip="Show the port editor">
-          <Path Style="{StaticResource IconPath}" Data="{StaticResource IconChevronLeft}" />
-        </Button>
-      </Border>
-
-      <Border Grid.Column="1" Width="{StaticResource EditorWidth}"
-              Background="{DynamicResource SurfaceBrush}"
-              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
-              Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVis}}">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-          </Grid.RowDefinitions>
-
-          <!-- editor header: title + collapse -->
-          <DockPanel Margin="16,8,8,0">
-            <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}"
-                    Command="{Binding ToggleEditorCommand}" ToolTip="Collapse the port editor">
-              <Path Style="{StaticResource IconPath}" Data="{StaticResource IconChevronRight}" />
-            </Button>
-            <Border Style="{StaticResource AccentBar}" />
-            <TextBlock Text="PORT EDITOR" Style="{StaticResource Heading}" Margin="10,0,0,0" />
+        <!-- profiles -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,24,0,0">
+          <DockPanel DockPanel.Dock="Top">
+            <TextBlock Text="PROFILES" FontWeight="SemiBold" FontSize="{StaticResource FontSizeMicro}"
+                       Foreground="{StaticResource TextOnInkMutedBrush}" VerticalAlignment="Center" />
+            <Button DockPanel.Dock="Right" Content="+ New" HorizontalAlignment="Right"
+                    Command="{Binding CaptureProfileCommand}" Padding="8,3" FontSize="{StaticResource FontSizeMeta}" />
           </DockPanel>
 
-          <!-- nothing selected: a large, faint icon and a one-line hint -->
-          <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16,0,16,64"
-                      Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
-            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconEmpty}"
-                  Stroke="{DynamicResource TextDimBrush}" StrokeThickness="1.3" Opacity="0.28"
-                  Width="{StaticResource EmptyStateGlyphSize}" Height="{StaticResource EmptyStateGlyphSize}"
-                  HorizontalAlignment="Center" />
-            <TextBlock Text="Select a port to edit its label, name and photo" Margin="0,16,0,0"
-                       Style="{StaticResource FieldLabel}" TextAlignment="Center" TextWrapping="Wrap" />
+          <ListBox Margin="0,10,0,0" Background="Transparent" BorderThickness="0"
+                   ItemsSource="{Binding ProfileList}" SelectedItem="{Binding SelectedProfile}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="0,0,0,8" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                      <ContentPresenter />
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border x:Name="card" CornerRadius="{StaticResource RadiusControl}" Padding="12,10"
+                        Background="{StaticResource SidebarCardBrush}" Cursor="Hand">
+                  <StackPanel>
+                    <DockPanel>
+                      <TextBlock x:Name="title" DockPanel.Dock="Left" Text="{Binding Name}" FontWeight="SemiBold"
+                                 Foreground="{StaticResource TextOnInkBrush}" />
+                      <Border x:Name="livePill" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                              CornerRadius="{StaticResource RadiusPill}" Padding="7,2" Background="{DynamicResource TextOnAccentBrush}">
+                        <Border.Visibility>
+                          <MultiBinding Converter="{StaticResource NamesEqual}">
+                            <Binding Path="Name" />
+                            <Binding Path="DataContext.Controller.ActiveProfile" RelativeSource="{RelativeSource AncestorType=Window}" />
+                          </MultiBinding>
+                        </Border.Visibility>
+                        <TextBlock Text="LIVE" FontSize="{StaticResource FontSizeChip}" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentBrush}" />
+                      </Border>
+                    </DockPanel>
+                    <TextBlock Text="{Binding Note}" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                               MaxHeight="34" FontSize="{StaticResource FontSizeMeta}"
+                               Foreground="{StaticResource TextOnInkMutedBrush}"
+                               Visibility="{Binding Note, Converter={StaticResource NullToVis}}" />
+                  </StackPanel>
+                </Border>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                    <Setter TargetName="card" Property="Background" Value="{DynamicResource AccentBrush}" />
+                    <Setter TargetName="title" Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
+                  </DataTrigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- ===================== content column ===================== -->
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <!-- a very faint accent bloom behind the top-left of the canvas -->
+      <Rectangle Grid.Row="2" Fill="{DynamicResource AccentBackdropBrush}" IsHitTestVisible="False" />
+
+      <!-- ===================== topbar ===================== -->
+      <Border Grid.Row="0" Height="{StaticResource ToolbarHeight}" Background="{DynamicResource SurfaceBrush}"
+              Padding="{StaticResource ToolbarPadding}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Style="{StaticResource ToolbarIconButton}" Command="{Binding RefreshCommand}" ToolTip="Refresh">
+              <Path Style="{StaticResource IconPath}" Data="{StaticResource IconRefresh}" />
+            </Button>
+            <ToggleButton Style="{StaticResource ToolbarIconToggle}" Margin="8,0,0,0"
+                          IsChecked="{Binding Controller.IsPanelMode}"
+                          ToolTip="Panel layout: drag tiles to mirror the physical ports on your case">
+              <Path Style="{StaticResource IconPath}" Data="{StaticResource IconPanel}" />
+            </ToggleButton>
+            <Button Content="Save as..." Margin="8,0,0,0" Command="{Binding CaptureProfileCommand}" />
+            <Button Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Content="{Binding SelectedProfile.Name, StringFormat=Apply: {0}, FallbackValue=Apply}"
+                    Command="{Binding ApplyProfileCommand}" />
           </StackPanel>
 
-          <!-- selected port -->
-          <ScrollViewer Grid.Row="1" Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto"
-                        Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
-            <StackPanel DataContext="{Binding SelectedPort}" Margin="{StaticResource EditorPadding}">
+          <!-- scope + view filters, kept from the previous toolbar -->
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+            <Border Background="{DynamicResource BgBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3">
+              <StackPanel Orientation="Horizontal">
+                <RadioButton Style="{StaticResource SegmentRadio}" Content="Controllers"
+                             IsChecked="{Binding Controller.ShowAllDevices, Converter={StaticResource InverseBool}}"
+                             ToolTip="Show controllers, HID devices and hubs only" />
+                <RadioButton Style="{StaticResource SegmentRadio}" Content="All devices" Margin="2,0,0,0"
+                             IsChecked="{Binding Controller.ShowAllDevices}"
+                             ToolTip="Show every USB device" />
+              </StackPanel>
+            </Border>
+            <ToggleButton Style="{StaticResource ChipToggle}" Content="Empty ports" Margin="12,0,0,0"
+                          IsChecked="{Binding Controller.ShowEmptyPorts}" ToolTip="Show ports with nothing plugged in" />
+            <ToggleButton Style="{StaticResource ChipToggle}" Content="Hidden" Margin="8,0,0,0"
+                          IsChecked="{Binding Controller.ShowHiddenPorts}" ToolTip="Show ports you hid" />
+            <Button Content="Reset layout" Margin="8,0,0,0" Command="{Binding ResetPanelLayoutCommand}"
+                    ToolTip="Forget all dragged positions"
+                    Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource BoolToVis}}" />
+          </StackPanel>
 
-              <!-- identity: icon, name, status -->
-              <Grid Margin="0,8,0,16">
+          <!-- search -->
+          <Grid VerticalAlignment="Center">
+            <TextBox Text="{Binding Controller.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Padding="32,7,10,7" MaxWidth="420" HorizontalAlignment="Stretch" />
+            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconSearch}"
+                  Stroke="{DynamicResource TextMutedBrush}" Width="14" Height="14"
+                  Margin="10,0,0,0" HorizontalAlignment="Left" IsHitTestVisible="False" />
+            <TextBlock Text="Search ports, labels, VID/PID, serials..." Margin="32,0,0,0"
+                       HorizontalAlignment="Left" IsHitTestVisible="False"
+                       Foreground="{DynamicResource TextMutedBrush}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Controller.SearchText}" Value="">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <!-- ===================== status banner ===================== -->
+      <Border Grid.Row="1" Padding="24,14" Background="{StaticResource InkBrush}">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="Enable all disabled" VerticalAlignment="Center"
+                  Command="{Binding EnableAllCommand}" ToolTip="Re-enable every device that is currently disabled">
+            <Button.Style>
+              <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Controller.DisabledCount}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Button.Style>
+          </Button>
+          <StackPanel>
+            <TextBlock Text="{Binding Controller.StatusBannerText}" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextOnInkBrush}" />
+            <TextBlock Margin="0,4,0,0" FontSize="{StaticResource FontSizeMeta}" Foreground="{StaticResource TextOnInkMutedBrush}"
+                       Text="Click any tile to switch it. Labels follow the device, not the port." />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- ===================== main content ===================== -->
+      <Grid Grid.Row="2">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto"
+                      Padding="{StaticResource PagePadding}">
+          <StackPanel>
+
+            <!-- front panel: a small fixed grid of ports the user pinned there -->
+            <StackPanel Margin="{StaticResource SectionGap}"
+                        Visibility="{Binding Controller.FrontPanelPorts.Count, Converter={StaticResource CountToVis}}">
+              <Grid Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <ContentControl ContentTemplate="{StaticResource IconWell}" Content="{Binding}"
-                                VerticalAlignment="Top" Margin="0,0,12,0" Focusable="False" />
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                  <TextBlock Text="{Binding DeviceName}" FontSize="{StaticResource FontSizeName}"
-                             FontWeight="SemiBold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                             LineHeight="{StaticResource NameLineHeight}" LineStackingStrategy="BlockLineHeight"
-                             MaxHeight="{StaticResource NameMaxHeight}"
-                             Foreground="{DynamicResource TextBrush}" />
-                  <ContentControl Margin="0,8,0,0" HorizontalAlignment="Left" Content="{Binding}"
-                                  ContentTemplate="{StaticResource StatusChip}"
-                                  Visibility="{Binding HasDevice, Converter={StaticResource BoolToVis}}" />
-                </StackPanel>
+                <Border Style="{StaticResource AccentBar}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource Heading}" Margin="10,0,0,0"
+                           Text="{Binding Controller.FrontPanelPorts.Count, StringFormat=FRONT PANEL — {0} PORTS}" />
+                <Border Grid.Column="2" Height="1" Background="{DynamicResource BorderBrush}"
+                        VerticalAlignment="Center" Margin="16,0,0,0" />
               </Grid>
+              <ItemsControl ItemsSource="{Binding Controller.FrontPanelPorts}" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PortTile}"
+                                    Width="{StaticResource TileMinWidth}" Margin="0,0,12,12" Focusable="False" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
 
-              <TextBlock Text="Port label" Style="{StaticResource FieldLabel}" />
-              <TextBox Text="{Binding EditPortLabel, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,16" />
-
-              <StackPanel Visibility="{Binding HasDevice, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="Device name" Style="{StaticResource FieldLabel}" />
-                <TextBox Text="{Binding EditDeviceName, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,16" />
-
-                <TextBlock Text="Note" Style="{StaticResource FieldLabel}" />
-                <TextBox Text="{Binding EditNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,16"
-                         AcceptsReturn="True" TextWrapping="Wrap" Height="72"
-                         VerticalScrollBarVisibility="Auto" />
-
-                <TextBlock Text="Photo" Style="{StaticResource FieldLabel}" />
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                  <Border Width="{StaticResource PhotoThumbSize}" Height="{StaticResource PhotoThumbSize}"
-                          CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource RaisedBrush}"
-                          BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                    <Grid>
-                      <Path Style="{StaticResource IconPath}" Data="{StaticResource IconImage}"
-                            Stroke="{DynamicResource TextMutedBrush}" Width="28" Height="28"
-                            Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}" />
-                      <Border CornerRadius="{StaticResource RadiusControl}"
-                              Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}">
-                        <Border.Background>
-                          <ImageBrush ImageSource="{Binding PhotoPath, Converter={StaticResource PhotoConverter}}"
-                                      Stretch="UniformToFill" />
-                        </Border.Background>
-                      </Border>
-                    </Grid>
-                  </Border>
-                  <StackPanel VerticalAlignment="Bottom" Margin="12,0,0,0">
-                    <Button Content="Change" Command="{Binding PickPhotoCommand}" />
-                    <Button Content="Remove" Margin="0,8,0,0" Command="{Binding ClearPhotoCommand}" />
-                  </StackPanel>
-                </StackPanel>
-              </StackPanel>
-
-              <!-- technical details: collapsed by default -->
-              <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,24,0,0"
-                      Padding="0,8,0,0">
-                <Expander Header="Details">
-                  <StackPanel Margin="0,4,0,0">
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}"
-                              Command="{Binding CopyDetailsCommand}" ToolTip="Copy details"
-                              VerticalAlignment="Top">
-                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconCopy}" />
-                      </Button>
-                      <Grid>
+            <!-- grouped view: one section per hub, tiles fill the row -->
+            <StackPanel Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource InverseBoolToVis}}">
+              <TextBlock Style="{StaticResource Heading}" Margin="0,0,0,12"
+                         Text="REAR PANEL — GROUPED BY HUB"
+                         Visibility="{Binding Controller.FrontPanelPorts.Count, Converter={StaticResource CountToVis}}" />
+              <ItemsControl ItemsSource="{Binding Controller.Hubs}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Margin="{StaticResource SectionGap}">
+                      <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="72" />
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="Auto" />
                           <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                          <RowDefinition Height="Auto" />
-                          <RowDefinition Height="Auto" />
-                          <RowDefinition Height="Auto" />
-                          <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Text="VID:PID" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VidPid}"
-                                   Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
-                        <TextBlock Grid.Row="1" Text="Serial" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SerialText}"
-                                   Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
-                        <TextBlock Grid.Row="2" Text="Instance" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding InstanceId}"
-                                   Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
-                        <TextBlock Grid.Row="3" Text="Hub / port" Style="{StaticResource FieldLabel}" />
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding HubPortText}"
-                                   Style="{StaticResource MonoMeta}" Margin="0,1,0,0" />
+                        <Border Style="{StaticResource AccentBar}" />
+                        <TextBlock Grid.Column="1" Text="{Binding HubHeader}" Style="{StaticResource Heading}"
+                                   ToolTip="{Binding DisplayName}" Margin="10,0,0,0" />
+                        <TextBlock Grid.Column="2" Text="{Binding UsageText}" Style="{StaticResource MutedText}"
+                                   Margin="12,0,0,0" />
+                        <Border Grid.Column="3" Height="1" Background="{DynamicResource BorderBrush}"
+                                VerticalAlignment="Center" Margin="16,0,0,0" />
                       </Grid>
-                    </DockPanel>
-                  </StackPanel>
-                </Expander>
-              </Border>
+                      <ItemsControl ItemsSource="{Binding Ports}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <svc:ResponsiveTilePanel MinTileWidth="{StaticResource TileMinWidth}"
+                                                     MaxTileWidth="{StaticResource TileMaxWidth}"
+                                                     GapX="{StaticResource Space12}" GapY="{StaticResource Space12}" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PortTile}"
+                                            Focusable="False" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- no devices at all -->
+              <StackPanel HorizontalAlignment="Center" Margin="0,80,0,0"
+                          Visibility="{Binding HasNoHubs, Converter={StaticResource BoolToVis}}">
+                <Grid Width="{StaticResource EmptyStateRingSize}" Height="{StaticResource EmptyStateRingSize}"
+                      HorizontalAlignment="Center">
+                  <Ellipse Stroke="{DynamicResource BorderStrongBrush}" StrokeThickness="1.5" StrokeDashArray="3 4" />
+                  <Ellipse Margin="14" Fill="{DynamicResource AccentTintBrush}" />
+                  <Path Data="{StaticResource IconEmpty}" Style="{StaticResource IconPath}"
+                        Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.4"
+                        Width="{StaticResource EmptyStateGlyphSize}" Height="{StaticResource EmptyStateGlyphSize}"
+                        Opacity="0.7" />
+                </Grid>
+                <TextBlock Text="No devices found - try Refresh" FontSize="{StaticResource FontSizeTitle}"
+                           FontWeight="SemiBold" Foreground="{DynamicResource TextDimBrush}"
+                           HorizontalAlignment="Center" Margin="0,20,0,0" />
+              </StackPanel>
             </StackPanel>
-          </ScrollViewer>
-        </Grid>
+
+            <!-- panel view: free-form rear-panel layout -->
+            <StackPanel Visibility="{Binding Controller.IsPanelMode, Converter={StaticResource BoolToVis}}">
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource AccentBar}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource Heading}" Margin="10,0,0,0"
+                           Text="REAR PANEL — TRUE LAYOUT" />
+                <Border Grid.Column="2" Height="1" Background="{DynamicResource BorderBrush}"
+                        VerticalAlignment="Center" Margin="16,0,0,0" />
+                <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
+                           Text="Drag tiles to mirror your case. The layout is saved automatically." />
+              </Grid>
+              <ScrollViewer Style="{StaticResource OverlayScrollViewer}"
+                            HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Canvas Width="{StaticResource PanelCanvasWidth}" Height="{StaticResource PanelCanvasHeight}"
+                        Background="{DynamicResource PanelGridBrush}">
+                  <ItemsControl ItemsSource="{Binding Controller.PanelPorts}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <Canvas />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                      <Style TargetType="ContentPresenter">
+                        <Setter Property="Canvas.Left" Value="{Binding LayoutX}" />
+                        <Setter Property="Canvas.Top" Value="{Binding LayoutY}" />
+                        <Setter Property="Width" Value="{StaticResource TileWidthFixed}" />
+                      </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <ContentControl Content="{Binding}" svc:PanelDrag.Enabled="True" Focusable="False"
+                                        ContentTemplate="{StaticResource PortTile}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Canvas>
+              </ScrollViewer>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- ===================== device editor (340px, collapsible) ===================== -->
+
+        <!-- collapsed: a slim rail with the expand button -->
+        <Border Grid.Column="1" Width="{StaticResource EditorRailWidth}"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
+                Visibility="{Binding IsEditorOpen, Converter={StaticResource InverseBoolToVis}}">
+          <Button Style="{StaticResource IconButton}" VerticalAlignment="Top" Margin="0,8,0,0"
+                  Command="{Binding ToggleEditorCommand}" ToolTip="Show the port editor">
+            <Path Style="{StaticResource IconPath}" Data="{StaticResource IconChevronLeft}" />
+          </Button>
+        </Border>
+
+        <Border Grid.Column="1" Width="{StaticResource EditorWidth}"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
+                Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVis}}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Margin="16,8,8,0">
+              <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}"
+                      Command="{Binding ToggleEditorCommand}" ToolTip="Collapse the port editor">
+                <Path Style="{StaticResource IconPath}" Data="{StaticResource IconChevronRight}" />
+              </Button>
+              <Border Style="{StaticResource AccentBar}" />
+              <TextBlock Text="PORT EDITOR" Style="{StaticResource Heading}" Margin="10,0,0,0" />
+            </DockPanel>
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16,0,16,64"
+                        Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
+              <Path Style="{StaticResource IconPath}" Data="{StaticResource IconEmpty}"
+                    Stroke="{DynamicResource TextDimBrush}" StrokeThickness="1.3" Opacity="0.28"
+                    Width="{StaticResource EmptyStateGlyphSize}" Height="{StaticResource EmptyStateGlyphSize}"
+                    HorizontalAlignment="Center" />
+              <TextBlock Text="Select a port to edit its label, name and photo" Margin="0,16,0,0"
+                         Style="{StaticResource FieldLabel}" TextAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+              <StackPanel DataContext="{Binding SelectedPort}" Margin="{StaticResource EditorPadding}">
+
+                <Grid Margin="0,8,0,16">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <ContentControl ContentTemplate="{StaticResource IconWell}" Content="{Binding}"
+                                  VerticalAlignment="Top" Margin="0,0,12,0" Focusable="False" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DeviceName}" FontSize="{StaticResource FontSizeName}"
+                               FontWeight="SemiBold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                               LineHeight="{StaticResource NameLineHeight}" LineStackingStrategy="BlockLineHeight"
+                               MaxHeight="{StaticResource NameMaxHeight}"
+                               Foreground="{DynamicResource TextBrush}" />
+                    <ContentControl Margin="0,8,0,0" HorizontalAlignment="Left" Content="{Binding}"
+                                    ContentTemplate="{StaticResource StatusChip}"
+                                    Visibility="{Binding HasDevice, Converter={StaticResource BoolToVis}}" />
+                  </StackPanel>
+                </Grid>
+
+                <CheckBox Content="On the front panel" IsChecked="{Binding IsFrontPanel}" Margin="0,0,0,16"
+                          ToolTip="Shows this port in the small front-panel grid instead of the hub/layout view" />
+
+                <TextBlock Text="Port label" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding EditPortLabel, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,16" />
+
+                <StackPanel Visibility="{Binding HasDevice, Converter={StaticResource BoolToVis}}">
+                  <TextBlock Text="Device name" Style="{StaticResource FieldLabel}" />
+                  <TextBox Text="{Binding EditDeviceName, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,16" />
+
+                  <TextBlock Text="Note" Style="{StaticResource FieldLabel}" />
+                  <TextBox Text="{Binding EditNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,16"
+                           AcceptsReturn="True" TextWrapping="Wrap" Height="72"
+                           VerticalScrollBarVisibility="Auto" />
+
+                  <TextBlock Text="Photo" Style="{StaticResource FieldLabel}" />
+                  <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Border Width="{StaticResource PhotoThumbSize}" Height="{StaticResource PhotoThumbSize}"
+                            CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource RaisedBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                      <Grid>
+                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconImage}"
+                              Stroke="{DynamicResource TextMutedBrush}" Width="28" Height="28"
+                              Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}" />
+                        <Border CornerRadius="{StaticResource RadiusControl}"
+                                Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}">
+                          <Border.Background>
+                            <ImageBrush ImageSource="{Binding PhotoPath, Converter={StaticResource PhotoConverter}}"
+                                        Stretch="UniformToFill" />
+                          </Border.Background>
+                        </Border>
+                      </Grid>
+                    </Border>
+                    <StackPanel VerticalAlignment="Bottom" Margin="12,0,0,0">
+                      <Button Content="Change" Command="{Binding PickPhotoCommand}" />
+                      <Button Content="Remove" Margin="0,8,0,0" Command="{Binding ClearPhotoCommand}" />
+                    </StackPanel>
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- technical details: always visible (the mockup's plain-row layout, not a
+                     collapsed Expander) -->
+                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,24,0,0"
+                        Padding="0,12,0,0">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}"
+                            Command="{Binding CopyDetailsCommand}" ToolTip="Copy details"
+                            VerticalAlignment="Top">
+                      <Path Style="{StaticResource IconPath}" Data="{StaticResource IconCopy}" />
+                    </Button>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                      </Grid.RowDefinitions>
+
+                      <TextBlock Grid.Row="0" Text="Label sticks to" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
+                      <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VidPid}"
+                                 Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
+                      <TextBlock Grid.Row="1" Text="Serial" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SerialText}"
+                                 Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
+                      <TextBlock Grid.Row="2" Text="Negotiated" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SpeedText}"
+                                 Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
+                      <TextBlock Grid.Row="3" Text="Hub path" Style="{StaticResource FieldLabel}" Margin="0,0,0,8" />
+                      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding HubPortText}"
+                                 Style="{StaticResource MonoMeta}" Margin="0,1,0,8" />
+                      <TextBlock Grid.Row="4" Text="Instance" Style="{StaticResource FieldLabel}" />
+                      <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding InstanceId}"
+                                 Style="{StaticResource MonoMeta}" Margin="0,1,0,0" />
+                    </Grid>
+                  </DockPanel>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- ===================== status bar (32px) ===================== -->
+      <Border Grid.Row="3" Height="{StaticResource StatusbarHeight}"
+              Background="{DynamicResource SurfaceBrush}" Padding="{StaticResource StatusbarPadding}"
+              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Padding="10,3" FontSize="{StaticResource FontSizeSecondary}"
+                  Command="{Binding OpenSettingsCommand}" VerticalAlignment="Center" ToolTip="Open settings">
+            <StackPanel Orientation="Horizontal">
+              <Path Style="{StaticResource IconPath}" Data="{StaticResource IconSettings}"
+                    Width="14" Height="14" Margin="0,0,6,0" />
+              <TextBlock Text="Settings" />
+            </StackPanel>
+          </Button>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Ellipse Style="{StaticResource BusySpinner}" Margin="0,0,8,0" />
+            <TextBlock Text="{Binding StatusText}" Style="{StaticResource MutedText}" />
+          </StackPanel>
+        </DockPanel>
       </Border>
     </Grid>
   </DockPanel>
-  </Grid>
 </Window>

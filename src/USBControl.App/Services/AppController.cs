@@ -30,13 +30,16 @@ public sealed partial class AppController : ObservableObject, IDisposable
     private string statusText = "Starting…";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusBannerText))]
     private string? activeProfile;
 
     // Summary band: counted from the full snapshot (not the filtered view).
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusBannerText))]
     private int deviceCount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusBannerText))]
     private int enabledCount;
 
     [ObservableProperty]
@@ -48,6 +51,12 @@ public sealed partial class AppController : ObservableObject, IDisposable
     /// <summary>Identity of the device whose power change is in flight (its tile shows the Busy chip).</summary>
     [ObservableProperty]
     private string? busyDeviceIdentity;
+
+    /// <summary>"12 of 16 ports live", with " — profile 'X'" appended once a profile has been applied.</summary>
+    public string StatusBannerText =>
+        string.IsNullOrEmpty(ActiveProfile)
+            ? $"{EnabledCount} of {DeviceCount} ports live"
+            : $"{EnabledCount} of {DeviceCount} ports live — profile '{ActiveProfile}'";
 
     /// <summary>Raised after a rebuild when the previously toggled port re-appeared (keeps the editor pinned).</summary>
     public event Action<PortEntry>? PortFocused;

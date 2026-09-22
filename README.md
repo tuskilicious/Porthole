@@ -50,13 +50,15 @@ sim-racing and flight-sim rigs (HOTAS, pedals, wheels), arcade and fightstick se
   interrupted while applying a profile it offers to undo it on the next start.
 - **Scope and filters.** *Controllers* (hubs and HID/game devices) or *All devices*, plus
   *Empty ports* and *Hidden* toggles, and per-port hiding.
+- **Front panel.** Pin a port to a small fixed grid above everything else, for the ports you
+  actually reach for — the rest stay in the hub-grouped list or the free-form layout below.
 - **Panel layout.** A free-form canvas: drag tiles to mirror the back of your case, with grid
   snapping. Positions persist per port.
 - **System tray.** Minimize or close to the tray with a live status tooltip and one-click profile
   switching from the tray menu. On Windows 11 new tray icons start in the overflow flyout; drag it
   onto the taskbar to pin it.
-- **Look and feel.** Dark UI with five switchable accent palettes (Cyan, Violet, Toxic, Blood,
-  Amber), a collapsible port editor, and motion tuned to stay out of the way.
+- **Look and feel.** Dark or Light theme, five switchable accent palettes (Cyan, Violet, Toxic,
+  Blood, Amber), a collapsible port editor, and motion tuned to stay out of the way.
 
 | Port editor | Panel layout (Violet accent) |
 | --- | --- |
