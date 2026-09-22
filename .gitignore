@@ -6,3 +6,9 @@ publish/
 .dotnet/
 dotnet-install.ps1
 .freebuff/
+
+# Local tooling artifacts (Claude Code skills cache, graphify output)
+.agents/
+.claude/
+graphify-out/
+skills-lock.json
