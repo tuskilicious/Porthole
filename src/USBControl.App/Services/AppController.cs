@@ -98,7 +98,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
             return;
         TryDeleteFlag();
         if (Confirm?.Invoke("Interrupted profile apply",
-                "USB Control closed while applying a profile, so some devices may have been left disabled.\n\nEnable every disabled device now?") == true)
+                "Porthole closed while applying a profile, so some devices may have been left disabled.\n\nEnable every disabled device now?") == true)
             _ = EnableAllDisabledAsync();
     }
 

@@ -416,6 +416,16 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+/// <summary>Non-empty string/non-null → Visible; used for the "active profile" pill (bound to ActiveProfile).</summary>
+public sealed class NullToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        (value is string s ? !string.IsNullOrEmpty(s) : value is not null) ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>Device kind ("controller", "mouse", …) → its line-icon geometry ("Icon" + Kind resource).</summary>
 public sealed class KindToGeometryConverter : IValueConverter
 {

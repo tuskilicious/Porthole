@@ -17,6 +17,7 @@
   <svc:BoolToVisibilityConverter x:Key="InverseBoolToVis" Inverse="True" />
   <svc:KindToGeometryConverter x:Key="KindToGeometry" />
   <svc:InverseBoolConverter x:Key="InverseBool" />
+  <svc:NullToVisibilityConverter x:Key="NullToVis" />
 
   <!-- device-type glyph (inside the icon well) -->
   <Style x:Key="TileGlyph" TargetType="Path" BasedOn="{StaticResource IconPath}">
@@ -267,7 +268,7 @@
                   </TextBlock.Style>
                 </TextBlock>
                 <TextBlock Text="{Binding PortCaption}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
-                           FontSize="{StaticResource FontSizeMicro}"
+                           FontFamily="{StaticResource FontMono}" FontSize="{StaticResource FontSizeMicro}"
                            Foreground="{StaticResource TextMutedBrush}" />
               </StackPanel>
 

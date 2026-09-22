@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svc="clr-namespace:USBControl.App.Services"
-        Title="USB Control" Height="760" Width="1240" MinHeight="600" MinWidth="1040"
-        Icon="Assets/usb.ico"
+        Title="Porthole" Height="760" Width="1240" MinHeight="600" MinWidth="1040"
+        Icon="Assets/porthole.ico"
         Style="{StaticResource {x:Type Window}}">
 
   <!-- All colors, sizes, fonts and radii come from Themes/Theme.xaml; the port tile and
@@ -23,6 +23,19 @@
 
         <!-- right: profiles -->
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+          <!-- brand mint, reserved for this one indicator: the profile currently applied -->
+          <Border Background="{StaticResource NeutralSoftBrush}" CornerRadius="{StaticResource RadiusPill}"
+                  Padding="10,5" Margin="0,0,8,0"
+                  Visibility="{Binding Controller.ActiveProfile, Converter={StaticResource NullToVis}}">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse Width="{StaticResource ChipDotSize}" Height="{StaticResource ChipDotSize}"
+                       Fill="{StaticResource ProfileActiveBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <TextBlock Foreground="{StaticResource ProfileActiveBrush}" FontSize="{StaticResource FontSizeChip}"
+                         FontWeight="SemiBold" VerticalAlignment="Center">
+                <Run Text="ACTIVE" /> <Run Text="{Binding Controller.ActiveProfile, Mode=OneWay}" />
+              </TextBlock>
+            </StackPanel>
+          </Border>
           <ComboBox x:Name="ProfileBox" ItemsSource="{Binding Controller.ProfileList}"
                     SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name"
                     Tag="Select profile..." Width="{StaticResource ProfileBoxWidth}" />
@@ -37,10 +50,11 @@
 
         <!-- left: brand, view filters, actions -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <Path Data="{StaticResource IconBolt}" Fill="{DynamicResource AccentBrush}"
-                Width="{StaticResource ToolbarGlyphSize}" Height="{StaticResource ToolbarGlyphSize}"
-                Stretch="Uniform" VerticalAlignment="Center" />
-          <TextBlock Text="USB CONTROL" Style="{StaticResource AppTitle}" Margin="10,0,0,0" />
+          <!-- brand mark: fixed tangerine, independent of the user's chosen accent palette -->
+          <Image Source="pack://application:,,,/Assets/porthole-mark.png"
+                 Width="{StaticResource ToolbarGlyphSize}" Height="{StaticResource ToolbarGlyphSize}"
+                 Stretch="Uniform" VerticalAlignment="Center" />
+          <TextBlock Text="PORTHOLE" Style="{StaticResource AppTitle}" Margin="10,0,0,0" />
 
           <Border Width="1" Height="24" Background="{StaticResource BorderBrush}" Margin="20,0" />
 

@@ -24,12 +24,15 @@ public static class Accents
     public static readonly Palette Blood = new("Blood", Color.FromRgb(0xFF, 0x46, 0x55), Color.FromRgb(0x8A, 0x26, 0x30), Color.FromRgb(0x5C, 0x19, 0x20));
     public static readonly Palette Amber = new("Amber", Color.FromRgb(0xFF, 0xB4, 0x54), Color.FromRgb(0x8F, 0x62, 0x2D), Color.FromRgb(0x5F, 0x41, 0x1E));
 
-    public static readonly IReadOnlyList<Palette> All = new[] { Cyan, Violet, Toxic, Blood, Amber };
+    /// <summary>Porthole's brand accent (#FF7A45) — the default palette.</summary>
+    public static readonly Palette Tangerine = new("Tangerine", Color.FromRgb(0xFF, 0x7A, 0x45), Color.FromRgb(0x8F, 0x44, 0x27), Color.FromRgb(0x5E, 0x2D, 0x1A));
+
+    public static readonly IReadOnlyList<Palette> All = new[] { Tangerine, Cyan, Violet, Toxic, Blood, Amber };
 
     public static Palette Resolve(string? name) =>
-        All.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) ?? Cyan;
+        All.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) ?? Tangerine;
 
-    /// <summary>Applies the named palette (startup + live switching). Unknown names fall back to Cyan.</summary>
+    /// <summary>Applies the named palette (startup + live switching). Unknown names fall back to Tangerine.</summary>
     public static void Apply(string? name)
     {
         var p = Resolve(name);

@@ -40,7 +40,7 @@ public partial class App : Application
                 // never let logging itself take the app down
             }
 
-            MessageBox.Show(args.Exception.Message, "USB Control — unexpected error",
+            MessageBox.Show(args.Exception.Message, "Porthole — unexpected error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
@@ -72,8 +72,8 @@ public partial class App : Application
             // Relaunched with the marker but still not admin (e.g. UAC declined twice) —
             // say why instead of showing a mystery empty device list.
             MessageBox.Show(
-                "USB Control needs administrator rights to enable/disable devices (the same rights Device Manager uses).",
-                "USB Control — elevation required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Porthole needs administrator rights to enable/disable devices (the same rights Device Manager uses).",
+                "Porthole — elevation required", MessageBoxButton.OK, MessageBoxImage.Warning);
             Shutdown();
             return;
         }
@@ -121,7 +121,7 @@ public partial class App : Application
 
         var win = new MainWindow();
         if (IsDemoMode)
-            win.Title = "USB Control — demo (simulated devices)";
+            win.Title = "Porthole — demo (simulated devices)";
         MainWindow = win;
         win.Show();
 

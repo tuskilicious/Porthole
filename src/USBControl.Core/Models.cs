@@ -116,8 +116,8 @@ public sealed class AppSettings
     public bool MinimizeToTray { get; set; } = true;
     public string Theme { get; set; } = "Dark";
 
-    /// <summary>Neon accent palette name (see App: Accents catalog). One of Cyan/Violet/Toxic/Blood/Amber.</summary>
-    public string Accent { get; set; } = "Cyan";
+    /// <summary>Neon accent palette name (see App: Accents catalog). One of Tangerine/Cyan/Violet/Toxic/Blood/Amber.</summary>
+    public string Accent { get; set; } = "Tangerine";
 
     public string? LastProfile { get; set; }
 }

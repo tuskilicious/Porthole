@@ -36,6 +36,10 @@
 
   <!-- status (device state only, never chrome) -->
   <Color x:Key="GoodColor">#FF3DD68C</Color>
+
+  <!-- Porthole brand: mint, reserved ONLY for "this profile is active" — never reused as a
+       general status color, even though it sits near GoodColor on the wheel. -->
+  <Color x:Key="ProfileActiveColor">#FF46E3A0</Color>
   <Color x:Key="WarnColor">#FFF5A524</Color>
   <Color x:Key="BadColor">#FFF0506E</Color>
 
@@ -70,6 +74,7 @@
   <SolidColorBrush x:Key="TextOnAccentBrush" Color="{StaticResource TextOnAccentColor}" />
 
   <SolidColorBrush x:Key="GoodBrush" Color="{StaticResource GoodColor}" />
+  <SolidColorBrush x:Key="ProfileActiveBrush" Color="{StaticResource ProfileActiveColor}" />
   <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource WarnColor}" />
   <SolidColorBrush x:Key="BadBrush" Color="{StaticResource BadColor}" />
   <SolidColorBrush x:Key="GoodSoftBrush" Color="{StaticResource GoodSoftColor}" />
@@ -89,8 +94,10 @@
   <!-- ===================== typography ===================== -->
 
   <FontFamily x:Key="FontBody">Segoe UI Variable, Segoe UI</FontFamily>
-  <FontFamily x:Key="FontHeading">Bahnschrift SemiBold, Bahnschrift, Segoe UI Semibold</FontFamily>
-  <FontFamily x:Key="FontMono">Cascadia Mono, Consolas</FontFamily>
+  <!-- Porthole brand fonts (Bricolage Grotesque / Space Mono); both fall through to the
+       previous choices when not installed, since the kit ships no font files to embed. -->
+  <FontFamily x:Key="FontHeading">Bricolage Grotesque, Bricolage Grotesque SemiBold, Bahnschrift SemiBold, Segoe UI Semibold</FontFamily>
+  <FontFamily x:Key="FontMono">Space Mono, Cascadia Mono, Consolas</FontFamily>
 
   <sys:Double x:Key="FontSizeTitle">15</sys:Double>
   <sys:Double x:Key="FontSizeName">16</sys:Double>

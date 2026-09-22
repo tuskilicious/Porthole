@@ -83,7 +83,7 @@ public static class SettingsWindow
         var panel = new StackPanel { Margin = SettingsPadding() };
         panel.Children.Add(new TextBlock
         {
-            Text = "USB Control runs elevated because enabling/disabling devices needs the same rights as Device Manager.",
+            Text = "Porthole runs elevated because enabling/disabling devices needs the same rights as Device Manager.",
             TextWrapping = TextWrapping.Wrap,
             FontSize = FontSizeMeta(),
             Foreground = Dim(),
@@ -108,7 +108,7 @@ public static class SettingsWindow
 
         var win = new Window
         {
-            Title = "USB Control — settings",
+            Title = "Porthole — settings",
             // The main window may be hidden in the tray; an invisible owner breaks modal centering.
             Owner = Application.Current?.MainWindow is { IsVisible: true } m ? m : null,
             Width = DialogWidth(),

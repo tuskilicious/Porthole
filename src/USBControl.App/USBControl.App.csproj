@@ -5,19 +5,24 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RootNamespace>USBControl.App</RootNamespace>
-    <AssemblyName>USBControl</AssemblyName>
+    <!-- The app was renamed to Porthole, so the built exe is Porthole.exe. RootNamespace stays
+         USBControl.App (an internal, non-user-visible detail) so the source tree, git history and
+         %APPDATA%\USBControl\ store path are undisturbed. -->
+    <AssemblyName>Porthole</AssemblyName>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\usb.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\porthole.ico</ApplicationIcon>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <Version>0.1.0</Version>
-    <AssemblyTitle>USB Control</AssemblyTitle>
-    <Product>USB Control</Product>
+    <AssemblyTitle>Porthole</AssemblyTitle>
+    <Product>Porthole</Product>
     <Description>Visual USB port manager — one-click enable/disable, names, photos, profiles.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\usb.ico" />
+    <Resource Include="Assets\porthole.ico" />
+    <Resource Include="Assets\porthole-tray-32.png" />
+    <Resource Include="Assets\porthole-mark.png" />
   </ItemGroup>
 
   <ItemGroup>

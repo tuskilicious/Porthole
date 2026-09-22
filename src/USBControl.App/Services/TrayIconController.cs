@@ -5,8 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using USBControl.Core;
 
 namespace USBControl.App.Services;
@@ -186,7 +184,7 @@ public sealed class TrayIconController : IDisposable
     {
         var menu = new ContextMenu();
 
-        var open = new MenuItem { Header = "Open USB Control", FontWeight = FontWeights.SemiBold };
+        var open = new MenuItem { Header = "Open Porthole", FontWeight = FontWeights.SemiBold };
         open.Click += (_, _) => ShowFromTray();
         menu.Items.Add(open);
 
@@ -232,7 +230,7 @@ public sealed class TrayIconController : IDisposable
             return;
         _vm.SelectedProfile = profile;
         await _controller.ApplyProfileAsync(profile);
-        ShowBalloon("USB Control", _controller.StatusText);
+        ShowBalloon("Porthole", _controller.StatusText);
     }
 
     // ---------------- tooltip / balloon ----------------
@@ -240,7 +238,7 @@ public sealed class TrayIconController : IDisposable
     private void OnControllerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(AppController.StatusText) or nameof(AppController.IsBusy))
-            UpdateTooltip("USB Control — " + _controller.StatusText);
+            UpdateTooltip("Porthole — " + _controller.StatusText);
     }
 
     private void UpdateTooltip(string text)
@@ -283,52 +281,28 @@ public sealed class TrayIconController : IDisposable
     {
         var nid = NewNid();
         nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
-        nid.szTip = "USB Control";
+        nid.szTip = "Porthole";
         _iconAdded = Shell_NotifyIconW(NIM_ADD, ref nid);
     }
 
-    // ---------------- icon rendering (code-drawn USB glyph) ----------------
+    // ---------------- icon rendering (Porthole brand mark) ----------------
 
+    /// <summary>
+    /// Loads the packaged 32x32 tray-icon PNG and hands its raw bytes straight to
+    /// CreateIconFromResourceEx, which expects raw icon resource bits (for PNG, that is the PNG
+    /// itself — wrapping it in an .ico file header makes the call fail and return NULL, leaving
+    /// the tray entry with no image). Fixed brand colors: the tray glyph does not re-tint with
+    /// the user's chosen accent palette, matching how most apps keep their logo mark constant.
+    /// </summary>
     private static IntPtr CreateTrayIconHandle()
     {
-        var accent = new SolidColorBrush((Color)Application.Current.Resources["AccentColor"]);
-        accent.Freeze();
-        var bg = new SolidColorBrush((Color)Application.Current.Resources["RaisedColor"]);
-        bg.Freeze();
+        var uri = new Uri("pack://application:,,,/Assets/porthole-tray-32.png");
+        using var stream = Application.GetResourceStream(uri)?.Stream;
+        if (stream is null)
+            return IntPtr.Zero;
 
-        var dv = new DrawingVisual();
-        using (var dc = dv.RenderOpen())
-        {
-            var plate = new RectangleGeometry(new Rect(1.5, 1.5, 29, 29), 7, 7);
-            plate.Freeze();
-            dc.DrawGeometry(bg, null, plate);
-
-            var pen = new Pen(accent, 3)
-            {
-                StartLineCap = PenLineCap.Round,
-                EndLineCap = PenLineCap.Round,
-            };
-            pen.Freeze();
-
-            dc.DrawLine(pen, new Point(16, 6), new Point(16, 11)); // prong tip
-            var body = new RectangleGeometry(new Rect(13, 11, 6, 12), 2, 2);
-            body.Freeze();
-            dc.DrawGeometry(null, pen, body);                      // connector body
-            var cable = new RectangleGeometry(new Rect(14.5, 23, 3, 5), 1.5, 1.5);
-            cable.Freeze();
-            dc.DrawGeometry(accent, null, cable);                  // cable stub
-        }
-
-        var rtb = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32);
-        rtb.Render(dv);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(rtb));
         using var ms = new MemoryStream();
-        encoder.Save(ms);
-
-        // CreateIconFromResourceEx takes raw icon resource bits; for PNG that is the PNG itself.
-        // (Wrapping it in an .ico file header makes the call fail and return NULL, which left
-        // the tray entry with no image, so nothing was visible.)
+        stream.CopyTo(ms);
         var png = ms.ToArray();
         return CreateIconFromResourceEx(png, (uint)png.Length, fIcon: true,
             dwVer: 0x00030000, 32, 32, flags: 0);

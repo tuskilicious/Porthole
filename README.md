@@ -1,4 +1,7 @@
-# USB Control
+# Porthole
+
+*(formerly USB Control — the app was renamed; this repository and its releases still use the
+old name, see [Naming](#naming) below.)*
 
 A visual USB port manager for Windows, built for people with a drawer full of controllers.
 Every physical USB port on your PC becomes a labeled tile you can rename, describe with a note
@@ -68,14 +71,15 @@ Treat it as a possible side effect, not a feature to rely on.
 
 ## What this does to your PC and how to undo it
 
-**What it does.** USB Control disables and enables devices through the same Windows API that
+**What it does.** Porthole disables and enables devices through the same Windows API that
 Device Manager's *Disable device* uses. A disabled device:
 
 - stays disabled after a reboot and after you unplug and replug it,
-- stays disabled even if USB Control is closed or uninstalled.
+- stays disabled even if Porthole is closed or uninstalled.
 
 The app has to run as administrator to do this (you get a UAC prompt). It installs no drivers or
-services. It stores its data in `%APPDATA%\USBControl\` (`store.json`, `Photos\`, and a `crash.log`
+services. It stores its data in `%APPDATA%\USBControl\` (still named after the old app name — see
+[Naming](#naming)) (`store.json`, `Photos\`, and a `crash.log`
 if something goes wrong). If you turn on *Start with Windows* in Settings, it adds one entry under
 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. Turning that option off removes it.
 
@@ -93,7 +97,7 @@ disabled** (top right, shown whenever something is disabled) re-enables every di
    Get-PnpDevice -PresentOnly | Where-Object Problem -eq 'CM_PROB_DISABLED' | Enable-PnpDevice -Confirm:$false
    ```
 
-   Or one device at a time, using its instance ID (shown in USB Control's editor under *Details*,
+   Or one device at a time, using its instance ID (shown in Porthole's editor under *Details*,
    or in Device Manager):
 
    ```powershell
@@ -106,7 +110,7 @@ device works even if the disabled one stays off), or use the on-screen keyboard 
 PowerShell command above. Safe mode does **not** undo a persistent disable.
 
 **Uninstalling.** Exit from the tray menu, run the undo step first (disables persist), then delete
-`USBControl.exe` and `%APPDATA%\USBControl\`.
+`Porthole.exe` and `%APPDATA%\USBControl\`.
 
 **Known limitations of this beta**
 
@@ -120,14 +124,18 @@ PowerShell command above. Safe mode does **not** undo a persistent disable.
 
 ## Download and run
 
-Get `USBControl.exe` from the [latest release](https://github.com/tuskilicious/USBControl/releases/latest). Two builds are offered:
+Get the exe from the [latest release](https://github.com/tuskilicious/USBControl/releases/latest).
+Two builds are offered:
 
 | File | Size | Needs |
 | --- | --- | --- |
 | `…-win-x64.exe` | about 75 MB | nothing else (self-contained) |
 | `…-win-x64-framework-dependent.exe` | about 25 MB | the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (x64) |
 
-Command line: `USBControl.exe --minimized` starts hidden in the tray (used by *Start with
+The v0.1.0-beta release predates the rename, so its assets are named `USBControl-v0.1.0-beta-*.exe`;
+a build from source (below) now produces `Porthole.exe`, and later releases will ship under that name.
+
+Command line: `Porthole.exe --minimized` starts hidden in the tray (used by *Start with
 Windows*). `--demo` runs a simulated set of devices with no hardware access and no elevation; it
 needs `USBControl.Testing.dll` next to the exe, which a source build produces.
 
@@ -141,6 +149,8 @@ dotnet test tests/USBControl.Tests/USBControl.Tests.csproj
 dotnet publish src/USBControl.App/USBControl.App.csproj -c Release -r win-x64 \
   --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
+
+This produces `publish/Porthole.exe`.
 
 A GitHub Actions workflow builds, tests, publishes the exe and runs it in `--demo` on a clean
 Windows VM for every push (it has no real USB devices).
@@ -191,3 +201,17 @@ refuse to disable, re-enumeration). That still needs testing on physical machine
 - Storage devices support with safe-eject-style actions
 - Auto-apply a profile when a game starts, and global hotkeys (deliberately deferred until the
   toggle path has been proven on real hardware)
+
+## Naming
+
+The app was renamed from **USB Control** to **Porthole**; the display name, window title, tray
+text, app icon and accent color changed with it. A few internal, non-user-facing things did not,
+on purpose, to avoid churn for no benefit:
+
+- the GitHub repository is still `tuskilicious/USBControl`,
+- the settings/photos folder is still `%APPDATA%\USBControl\`,
+- the source project names (`USBControl.Core`, `USBControl.Hardware`, `USBControl.App`,
+  `USBControl.Testing`) and namespaces are unchanged.
+
+The built exe is `Porthole.exe`. The brand accent is tangerine (`#FF7A45`); mint (`#46E3A0`) is
+reserved for the "this profile is active" indicator and is not reused elsewhere.

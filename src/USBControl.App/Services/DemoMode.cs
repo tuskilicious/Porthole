@@ -248,8 +248,8 @@ public static class DemoMode
         if (!File.Exists(dllPath))
         {
             MessageBox.Show(
-                "Demo mode needs USBControl.Testing.dll next to USBControl.exe (it ships with the published build).\n\nExpected at: " + dllPath,
-                "USB Control — demo mode", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Demo mode needs USBControl.Testing.dll next to Porthole.exe (it ships with the published build).\n\nExpected at: " + dllPath,
+                "Porthole — demo mode", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
 

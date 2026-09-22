@@ -42,14 +42,16 @@
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
   </Style>
 
-  <!-- summary band: big number over a small tracked-out label -->
+  <!-- summary band: big number over a small tracked-out label. Brand: counts read in Space
+       Mono, like the port IDs/labels elsewhere (Tiles.xaml PortCaption, MonoMeta). -->
   <Style x:Key="StatValue" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource FontHeading}" />
+    <Setter Property="FontFamily" Value="{StaticResource FontMono}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeStat}" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
 
   <Style x:Key="StatLabel" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource FontMono}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeStatLabel}" />
     <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
     <Setter Property="Margin" Value="0,2,0,0" />

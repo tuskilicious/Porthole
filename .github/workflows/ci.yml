@@ -35,7 +35,7 @@ jobs:
       - name: Run the published app in demo mode and capture every UI state
         run: |
           New-Item -ItemType Directory -Force shots | Out-Null
-          $p = Start-Process publish\USBControl.exe -ArgumentList '--demo','--screenshot',"$PWD\shots\ui.png" -PassThru
+          $p = Start-Process publish\Porthole.exe -ArgumentList '--demo','--screenshot',"$PWD\shots\ui.png" -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'demo mode did not finish within 2 minutes' }
 
           $expected = 'ui','ui-editor-empty','ui-selected','ui-wide','ui-panel','ui-nodevices','ui-settings'

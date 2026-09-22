@@ -45,7 +45,7 @@ public partial class MainWindow : Window
         if (!_balloonShownOnce)
         {
             _balloonShownOnce = true;
-            App.Tray?.ShowBalloon("USB Control still runs here",
+            App.Tray?.ShowBalloon("Porthole still runs here",
                 "Devices stay enabled/disabled as configured. Click the tray icon to reopen.");
         }
     }
