@@ -78,6 +78,9 @@ public partial class App : Application
             return;
         }
 
+        var splash = SplashWindow.Create();
+        splash.Show();
+
         var store = IsDemoMode
             ? new AppStore(Path.Combine(Path.GetTempPath(), "USBControl-demo"))
             : new AppStore();
@@ -123,6 +126,7 @@ public partial class App : Application
         if (IsDemoMode)
             win.Title = "Porthole — demo (simulated devices)";
         MainWindow = win;
+        win.ContentRendered += (_, _) => splash.Close();
         win.Show();
 
         var vm = (MainWindowViewModel)win.DataContext;
