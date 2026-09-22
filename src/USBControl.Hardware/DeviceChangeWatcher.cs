@@ -3,8 +3,14 @@ using System.Runtime.InteropServices;
 namespace USBControl.Hardware;
 
 /// <summary>
-/// Background message-only window that receives WM_DEVICECHANGE (DBT_DEVNODES_CHANGED)
-/// and raises debounced change notifications. Kept out of WPF so it never touches the UI thread.
+/// Background window that receives WM_DEVICECHANGE (DBT_DEVNODES_CHANGED) and raises debounced
+/// change notifications. Kept out of WPF so it never touches the UI thread.
+///
+/// The window is created invisible but NOT message-only (parent is NULL, not HWND_MESSAGE):
+/// Windows delivers DBT_DEVNODES_CHANGED via HWND_BROADCAST, which explicitly excludes
+/// message-only windows ("A message-only window does not receive broadcast messages") but does
+/// include invisible unowned top-level windows. A message-only window here would silently never
+/// see a single device event, hot-plug detection included.
 /// </summary>
 public sealed class DeviceChangeWatcher : IDisposable
 {
@@ -45,7 +51,7 @@ public sealed class DeviceChangeWatcher : IDisposable
         Native.RegisterClassW(ref wc);
 
         _hwnd = Native.CreateWindowExW(0, className, "USBControlDeviceWatcher", 0,
-            0, 0, 0, 0, new IntPtr(Native.HWND_MESSAGE), IntPtr.Zero, wc.hInstance, IntPtr.Zero);
+            0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, wc.hInstance, IntPtr.Zero);
 
         while (!_stop && Native.GetMessageW(out var msg, _hwnd, 0, 0) > 0)
         {

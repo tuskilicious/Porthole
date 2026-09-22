@@ -189,13 +189,20 @@
 
           <!-- search -->
           <Grid VerticalAlignment="Center">
+            <!-- Explicit Height: as the DockPanel's fill child, this Grid's available height
+                 during Measure is the toolbar's full remaining height, not the infinite budget a
+                 StackPanel would give — and a plain TextBox's ScrollViewer content host reports
+                 that whole available height as its desired size instead of sizing to its one line
+                 of text, towering over the buttons beside it. An explicit Height sidesteps that
+                 (every other TextBox in the app sits in a StackPanel/Auto-row instead, which is
+                 why only this one needs it). -->
             <TextBox Text="{Binding Controller.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     Padding="32,7,10,7" MaxWidth="420" HorizontalAlignment="Stretch" />
+                     Padding="32,7,10,7" MaxWidth="420" HorizontalAlignment="Stretch" Height="34" />
             <Path Style="{StaticResource IconPath}" Data="{StaticResource IconSearch}"
                   Stroke="{DynamicResource TextMutedBrush}" Width="14" Height="14"
-                  Margin="10,0,0,0" HorizontalAlignment="Left" IsHitTestVisible="False" />
+                  Margin="10,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False" />
             <TextBlock Text="Search ports, labels, VID/PID, serials..." Margin="32,0,0,0"
-                       HorizontalAlignment="Left" IsHitTestVisible="False"
+                       HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"
                        Foreground="{DynamicResource TextMutedBrush}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">

@@ -16,9 +16,6 @@ public static class SettingsWindow
     {
         var s = controller.Settings;
 
-        Brush Bg() => (Brush)Application.Current.Resources["BgBrush"];
-        Brush Text() => (Brush)Application.Current.Resources["TextBrush"];
-        Brush Dim() => (Brush)Application.Current.Resources["TextDimBrush"];
         double FontSizeMicro() => Num("FontSizeMicro");
         Thickness Gap(double top = 0, double bottom = 0) => new(0, top, 0, bottom);
         double S4() => Num("Space4");
@@ -29,20 +26,38 @@ public static class SettingsWindow
         double DialogWidth() => Num("SettingsDialogWidth");
         Thickness SettingsPadding() => (Thickness)Application.Current.Resources["SettingsPadding"];
 
-        TextBlock SectionLabel(string text) => new()
+        // A selected swatch's ring needs to track "TextBrush" live (SetResourceReference, the C#
+        // equivalent of {DynamicResource}) rather than a one-time snapshot — otherwise clicking
+        // the *other* row's swatch (theme vs. accent) while this dialog is open leaves the ring
+        // painted in the old theme's text color even though the rest of the app just repainted.
+        void MarkSelected(Control c, bool selected)
         {
-            Text = text,
-            FontFamily = (FontFamily)Application.Current.Resources["FontHeading"],
-            FontSize = FontSizeMicro(),
-            Foreground = Dim(),
-            Margin = Gap(S24(), S4()),
-        };
+            if (selected)
+                c.SetResourceReference(Control.BorderBrushProperty, "TextBrush");
+            else
+                c.BorderBrush = Brushes.Transparent;
+        }
 
-        var chkAll = new CheckBox { Content = "Show every USB device (not just controllers/hubs)", IsChecked = s.ShowAllDevices, Margin = Gap(S8()), Foreground = Text() };
-        var chkEmpty = new CheckBox { Content = "Show empty ports", IsChecked = s.ShowEmptyPorts, Margin = Gap(S8()), Foreground = Text() };
-        var chkHidden = new CheckBox { Content = "Show ports you hid", IsChecked = s.ShowHiddenPorts, Margin = Gap(S8()), Foreground = Text() };
-        var chkAutostart = new CheckBox { Content = "Start with Windows (minimized)", IsChecked = IsAutostartEnabled(), Margin = Gap(S8()), Foreground = Text() };
-        var chkTray = new CheckBox { Content = "Minimize & close to the system tray (exit from the tray menu)", IsChecked = s.MinimizeToTray, Margin = Gap(S8()), Foreground = Text() };
+        TextBlock SectionLabel(string text)
+        {
+            var tb = new TextBlock
+            {
+                Text = text,
+                FontFamily = (FontFamily)Application.Current.Resources["FontHeading"],
+                FontSize = FontSizeMicro(),
+                Margin = Gap(S24(), S4()),
+            };
+            tb.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
+            return tb;
+        }
+
+        var chkAll = new CheckBox { Content = "Show every USB device (not just controllers/hubs)", IsChecked = s.ShowAllDevices, Margin = Gap(S8()) };
+        var chkEmpty = new CheckBox { Content = "Show empty ports", IsChecked = s.ShowEmptyPorts, Margin = Gap(S8()) };
+        var chkHidden = new CheckBox { Content = "Show ports you hid", IsChecked = s.ShowHiddenPorts, Margin = Gap(S8()) };
+        var chkAutostart = new CheckBox { Content = "Start with Windows (minimized)", IsChecked = IsAutostartEnabled(), Margin = Gap(S8()) };
+        var chkTray = new CheckBox { Content = "Minimize & close to the system tray (exit from the tray menu)", IsChecked = s.MinimizeToTray, Margin = Gap(S8()) };
+        foreach (var chk in new[] { chkAll, chkEmpty, chkHidden, chkAutostart, chkTray })
+            chk.SetResourceReference(Control.ForegroundProperty, "TextBrush");
 
         // --- accent swatches (live preview; persisted on Save like the checkboxes) ---
         var pendingAccent = s.Accent;
@@ -57,17 +72,16 @@ public static class SettingsWindow
                 Margin = new Thickness(0, 0, S8(), 0),
                 ToolTip = p.Name,
                 BorderThickness = new Thickness(2),
-                BorderBrush = p.Name.Equals(pendingAccent, StringComparison.OrdinalIgnoreCase) ? Text() : Brushes.Transparent,
                 Background = new SolidColorBrush(p.Base),
                 Style = (Style)Application.Current.Resources["SwatchButton"],
             };
+            MarkSelected(swatch, p.Name.Equals(pendingAccent, StringComparison.OrdinalIgnoreCase));
             swatch.Click += (_, _) =>
             {
                 pendingAccent = p.Name;
                 Accents.Apply(p.Name); // instant preview across the whole app
                 foreach (Button other in swatchRow.Children)
-                    other.BorderBrush = ReferenceEquals(other.Tag, p) ? Text() : Brushes.Transparent;
-                swatch.Tag = p;
+                    MarkSelected(other, ReferenceEquals(other.Tag, p));
             };
             swatch.Tag = p;
             swatchRow.Children.Add(swatch);
@@ -86,8 +100,8 @@ public static class SettingsWindow
                 Height = SwatchSize(),
                 Margin = new Thickness(0, 0, S8(), 0),
                 BorderThickness = new Thickness(2),
-                BorderBrush = tm.Name.Equals(pendingTheme, StringComparison.OrdinalIgnoreCase) ? Text() : Brushes.Transparent,
             };
+            MarkSelected(swatch, tm.Name.Equals(pendingTheme, StringComparison.OrdinalIgnoreCase));
             swatch.Click += (_, _) =>
             {
                 pendingTheme = tm.Name;
@@ -96,7 +110,7 @@ public static class SettingsWindow
                 if (Application.Current?.MainWindow is { } main)
                     DarkTitleBar.Apply(main);
                 foreach (Button other in themeRow.Children)
-                    other.BorderBrush = ReferenceEquals(other.Tag, tm) ? Text() : Brushes.Transparent;
+                    MarkSelected(other, ReferenceEquals(other.Tag, tm));
             };
             swatch.Tag = tm;
             themeRow.Children.Add(swatch);
@@ -110,13 +124,14 @@ public static class SettingsWindow
         var cancel = new Button { Content = "Cancel", Width = 92, IsCancel = true, Margin = Gap(S24()) };
 
         var panel = new StackPanel { Margin = SettingsPadding() };
-        panel.Children.Add(new TextBlock
+        var warning = new TextBlock
         {
             Text = "Porthole runs elevated because enabling/disabling devices needs the same rights as Device Manager.",
             TextWrapping = TextWrapping.Wrap,
             FontSize = FontSizeMeta(),
-            Foreground = Dim(),
-        });
+        };
+        warning.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
+        panel.Children.Add(warning);
 
         panel.Children.Add(SectionLabel("VIEW"));
         panel.Children.Add(chkAll);
@@ -148,9 +163,9 @@ public static class SettingsWindow
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ResizeMode = ResizeMode.NoResize,
             ShowInTaskbar = false,
-            Background = Bg(),
             Content = panel,
         };
+        win.SetResourceReference(Window.BackgroundProperty, "BgBrush");
 
         DarkTitleBar.Apply(win);
 
