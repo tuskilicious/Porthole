@@ -89,7 +89,9 @@ public sealed class DevicePowerService : IDevicePowerService
                 Native.SetupDiCallClassInstaller(Native.DIF_PROPERTYCHANGE, set, ref devInfo);
             }
 
-            if (IsDisabledDevInst(devInfo.DevInst) == enable)
+            // Success means the post-change disabled-state is the opposite of "enable"
+            // (enabled -> not disabled, disabled -> disabled).
+            if (IsDisabledDevInst(devInfo.DevInst) != enable)
                 return (true, null);
 
             return (false, $"state did not change (Win32 0x{Marshal.GetLastWin32Error():X})");

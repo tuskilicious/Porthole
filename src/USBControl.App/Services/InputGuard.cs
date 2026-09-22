@@ -93,22 +93,29 @@ public static class InputGuard
 {
     public sealed record Risk(string Kind, string Name, bool IsLastEnabled);
 
-    /// <summary>Keyboards/mice among the devices that would end up disabled.</summary>
-    public static IReadOnlyList<Risk> Assess(TopologySnapshot snapshot, IEnumerable<string> instanceIdsToDisable)
+    /// <summary>Keyboards/mice among the devices that would end up disabled. <paramref name="instanceIdsToEnable"/>
+    /// covers a same-operation swap (e.g. applying a profile that enables one keyboard while disabling
+    /// another) so a device taking over isn't miscounted as leaving the user with none.</summary>
+    public static IReadOnlyList<Risk> Assess(TopologySnapshot snapshot, IEnumerable<string> instanceIdsToDisable,
+        IEnumerable<string>? instanceIdsToEnable = null)
     {
         var doomed = new HashSet<string>(instanceIdsToDisable, StringComparer.OrdinalIgnoreCase);
-        var enabled = snapshot.AllPorts
-            .Where(p => p.Device is { IsHub: false } && p.State != PortState.Disabled)
-            .Select(p => (Device: p.Device!, Kind: DeviceClassifier.Classify(p.Device!)))
+        var enabling = new HashSet<string>(instanceIdsToEnable ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        var all = snapshot.AllPorts
+            .Where(p => p.Device is { IsHub: false })
+            .Select(p => (Device: p.Device!, Kind: DeviceClassifier.Classify(p.Device!), p.State))
             .Where(x => x.Kind is "keyboard" or "mouse")
             .ToList();
+
+        bool Survives((UsbDeviceInfo Device, string Kind, PortState State) x) =>
+            x.State != PortState.Disabled ? !doomed.Contains(x.Device.InstanceId) : enabling.Contains(x.Device.InstanceId);
 
         var risks = new List<Risk>();
         foreach (var kind in new[] { "keyboard", "mouse" })
         {
-            var ofKind = enabled.Where(x => x.Kind == kind).ToList();
-            var survivors = ofKind.Count(x => !doomed.Contains(x.Device.InstanceId));
-            foreach (var x in ofKind.Where(x => doomed.Contains(x.Device.InstanceId)))
+            var ofKind = all.Where(x => x.Kind == kind).ToList();
+            var survivors = ofKind.Count(Survives);
+            foreach (var x in ofKind.Where(x => x.State != PortState.Disabled && doomed.Contains(x.Device.InstanceId)))
                 risks.Add(new Risk(kind, string.IsNullOrWhiteSpace(x.Device.DisplayName) ? x.Device.InstanceId : x.Device.DisplayName,
                     IsLastEnabled: survivors == 0));
         }

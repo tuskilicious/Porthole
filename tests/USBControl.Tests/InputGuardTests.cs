@@ -64,4 +64,15 @@ public class InputGuardTests
         var cam = Port(2, "Webcam", "Camera");
         Assert.Empty(InputGuard.Assess(Snapshot(pad, cam), new[] { pad.Device!.InstanceId, cam.Device!.InstanceId }));
     }
+
+    [Fact]
+    public void Swapping_to_a_replacement_keyboard_in_the_same_operation_is_not_flagged_as_last()
+    {
+        var oldKb = Port(1, "USB Keyboard", "HIDClass");
+        var newKb = Port(2, "Other Keyboard", "HIDClass", PortState.Disabled);
+        var risk = Assert.Single(InputGuard.Assess(Snapshot(oldKb, newKb),
+            instanceIdsToDisable: new[] { oldKb.Device!.InstanceId },
+            instanceIdsToEnable: new[] { newKb.Device!.InstanceId }));
+        Assert.False(risk.IsLastEnabled);
+    }
 }

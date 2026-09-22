@@ -162,8 +162,7 @@ public static class SettingsWindow
             s.MinimizeToTray = chkTray.IsChecked != false;
             s.Accent = pendingAccent;
             s.Theme = pendingTheme;
-            SetAutostart(chkAutostart.IsChecked == true);
-            s.StartWithWindows = chkAutostart.IsChecked == true;
+            s.StartWithWindows = SetAutostart(chkAutostart.IsChecked == true);
             controller.Store.Save();
             controller.RefreshFromSettings();
             win.Close();
@@ -185,18 +184,22 @@ public static class SettingsWindow
         return key?.GetValue("USBControl") is string;
     }
 
-    private static void SetAutostart(bool enable)
+    /// <summary>Returns whether autostart actually ended up in the requested state, so the caller
+    /// doesn't persist "on" when there was no process path to write (leaving Settings and the
+    /// registry disagreeing from then on).</summary>
+    private static bool SetAutostart(bool enable)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath);
-        if (enable)
-        {
-            var exe = Environment.ProcessPath;
-            if (!string.IsNullOrEmpty(exe))
-                key.SetValue("USBControl", $"\"{exe}\" --minimized");
-        }
-        else
+        if (!enable)
         {
             key.DeleteValue("USBControl", throwOnMissingValue: false);
+            return true;
         }
+
+        var exe = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exe))
+            return false;
+        key.SetValue("USBControl", $"\"{exe}\" --minimized");
+        return true;
     }
 }

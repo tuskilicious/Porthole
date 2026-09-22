@@ -94,9 +94,9 @@ public sealed partial class AppController : ObservableObject, IDisposable
     private string ApplyFlagPath => Path.Combine(Store.RootDir, "apply-in-progress.flag");
 
     /// <summary>False when the user declined to disable a keyboard/mouse the guard flagged.</summary>
-    private bool ConfirmDisable(IEnumerable<string> instanceIds)
+    private bool ConfirmDisable(TopologySnapshot snapshot, IEnumerable<string> instanceIds, IEnumerable<string>? enablingInstanceIds = null)
     {
-        var risks = InputGuard.Assess(_snapshot, instanceIds);
+        var risks = InputGuard.Assess(snapshot, instanceIds, enablingInstanceIds);
         return risks.Count == 0 || Confirm is null
             || Confirm(risks.Any(r => r.IsLastEnabled) ? "Disable your last keyboard or mouse?" : "Disable input device?",
                 InputGuard.Describe(risks));
@@ -212,7 +212,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
                 _snapshot = snapshot;
                 EnsurePanelLayout();
                 RebuildCollections();
-                Store.Save();
+                // Runs on every refresh (including the ~30s "last seen" metadata bump in
+                // TopologyMerger), not just explicit user edits — keep the synchronous
+                // serialize+write off the UI thread.
+                await Task.Run(Store.Save);
 
                 var devices = _snapshot.AllPorts.Count(p => p.Device is not null);
                 var disabled = _snapshot.AllPorts.Count(p => p.State == PortState.Disabled);
@@ -347,7 +350,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
             if (_searchText == value) return;
             _searchText = value;
             OnPropertyChanged();
-            _ = RefreshAsync();
+            // Filtering never needs a fresh hardware walk — only which of the already-known
+            // ports/hubs are shown changes. A full RefreshAsync() here would re-enumerate the
+            // real USB tree on every keystroke while typing in the search box.
+            RebuildCollections();
         }
     }
 
@@ -367,7 +373,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
         if (port.Device is null)
             return;
 
-        if (!enable && !ConfirmDisable(new[] { port.Device.InstanceId }))
+        if (!enable && !ConfirmDisable(_snapshot, new[] { port.Device.InstanceId }))
         {
             StatusText = $"Left {port.Device.DisplayName} enabled.";
             await RefreshAsync(); // snaps the tile's switch back to its real state
@@ -618,8 +624,14 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
     public async Task ApplyProfileAsync(Profile profile)
     {
-        var disabling = ProfileEngine.BuildOps(_snapshot, profile).Where(o => !o.Enable).Select(o => o.InstanceId);
-        if (!ConfirmDisable(disabling))
+        // Captured once, before the confirm dialog: a hot-plug refresh landing while the modal
+        // is open (WPF's dispatcher still pumps during a native MessageBox loop) must not let the
+        // ops actually applied drift from the ones the user was warned about and approved.
+        var snapshot = _snapshot;
+        var ops = ProfileEngine.BuildOps(snapshot, profile);
+        var disabling = ops.Where(o => !o.Enable).Select(o => o.InstanceId).ToList();
+        var enabling = ops.Where(o => o.Enable).Select(o => o.InstanceId).ToList();
+        if (!ConfirmDisable(snapshot, disabling, enabling))
         {
             StatusText = $"Profile '{profile.Name}' not applied.";
             return;
@@ -631,7 +643,6 @@ public sealed partial class AppController : ObservableObject, IDisposable
             try { File.WriteAllText(ApplyFlagPath, DateTime.UtcNow.ToString("O")); } catch { /* best effort */ }
             // Created on the caller (UI) thread so reports marshal correctly.
             var progress = new Progress<string>(s => StatusText = s);
-            var snapshot = _snapshot; // stable reference for this batch
             var report = await Task.Run(() => _profiles.Apply(profile, snapshot, progress));
             Settings.LastProfile = profile.Name;
             Store.Save();
