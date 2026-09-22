@@ -1,7 +1,7 @@
 # Porthole
 
-*(formerly USB Control — the app was renamed; this repository and its releases still use the
-old name, see [Naming](#naming) below.)*
+*(formerly USB Control — the app and repository were renamed; a few internal, non-user-facing
+things still use the old name, see [Naming](#naming) below.)*
 
 A visual USB port manager for Windows, built for people with a drawer full of controllers.
 Every physical USB port on your PC becomes a labeled tile you can rename, describe with a note
@@ -126,7 +126,7 @@ PowerShell command above. Safe mode does **not** undo a persistent disable.
 
 ## Download and run
 
-Get the exe from the [latest release](https://github.com/tuskilicious/USBControl/releases/latest).
+Get the exe from the [latest release](https://github.com/tuskilicious/Porthole/releases/latest).
 Two builds are offered:
 
 | File | Size | Needs |
@@ -210,7 +210,6 @@ The app was renamed from **USB Control** to **Porthole**; the display name, wind
 text, app icon and accent color changed with it. A few internal, non-user-facing things did not,
 on purpose, to avoid churn for no benefit:
 
-- the GitHub repository is still `tuskilicious/USBControl`,
 - the settings/photos folder is still `%APPDATA%\USBControl\`,
 - the source project names (`USBControl.Core`, `USBControl.Hardware`, `USBControl.App`,
   `USBControl.Testing`) and namespaces are unchanged.

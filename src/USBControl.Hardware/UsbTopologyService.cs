@@ -10,11 +10,24 @@ namespace USBControl.Hardware;
 /// device to its PnP devnode via the connection driver-key name (which is the device
 /// instance id). No kernel driver or WDK dependency needed.
 /// </summary>
-public sealed class UsbTopologyService : ITopologyService
+public sealed class UsbTopologyService : ITopologyService, IDisposable
 {
     private const int USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION = 260;
     private static readonly uint IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION =
         (0x22u << 16) | (0u << 14) | (USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION << 2) | 0u;
+
+    // Raises Changed on device arrival/removal (WM_DEVICECHANGE), so the UI stays live without
+    // polling. Changed fires from the watcher's own debounce task, not the UI thread — callers
+    // must marshal back before touching anything UI-bound (see AppController.OnTopologyChanged).
+    private readonly DeviceChangeWatcher _watcher = new();
+
+    public UsbTopologyService()
+    {
+        _watcher.Changed += () => Changed?.Invoke();
+        _watcher.Start();
+    }
+
+    public void Dispose() => _watcher.Dispose();
 
     public event Action? Changed;
 

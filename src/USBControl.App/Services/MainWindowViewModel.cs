@@ -105,11 +105,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             SelectedPort = vm;
             IsEditorOpen = true;
         };
-        // After a toggle, keep an already-open selection pinned to the same device; never
-        // select (and so never open the editor for) a tile the user has not clicked.
+        // After a toggle, keep an already-open selection pinned to the same device across the
+        // refresh that follows — but only when the toggled device is the one actually shown;
+        // otherwise toggling any other tile while an editor is open would hijack it.
         Controller.PortFocused += entry =>
         {
-            if (SelectedPort is not null)
+            if (SelectedPort?.Entry.Device?.Identity == entry.Device?.Identity)
                 SelectedPort = FindViewModel(entry);
         };
         Controller.PropertyChanged += (_, e) =>
@@ -136,7 +137,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     /// <summary>The tile view-model wrapping a snapshot entry (null when the port is filtered out).</summary>
     private PortViewModel? FindViewModel(PortEntry entry) =>
-        Controller.Hubs.SelectMany(h => h.Ports).FirstOrDefault(vm => vm.Entry == entry);
+        Controller.Hubs.SelectMany(h => h.Ports).Concat(Controller.FrontPanelPorts)
+            .FirstOrDefault(vm => vm.Entry == entry);
 
     private async Task ApplySelectedProfileAsync()
     {

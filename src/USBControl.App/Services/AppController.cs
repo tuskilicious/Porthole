@@ -169,8 +169,12 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
     private void OnTopologyChanged()
     {
+        // Fires from the topology watcher's own background thread, not the UI thread — RefreshAsync
+        // (and the ObservableProperty sets at the top of RunRefreshCoreAsync) must start on the UI
+        // thread like every other caller of RefreshAsync, or WPF's data-bound properties get touched
+        // off-thread.
         Interlocked.Increment(ref _changeSeq);
-        _ = RefreshAsync();
+        RunOnUi(() => _ = RefreshAsync());
     }
 
     /// <summary>
@@ -242,6 +246,12 @@ public sealed partial class AppController : ObservableObject, IDisposable
 
     private void MergeStore(TopologySnapshot snapshot) => TopologyMerger.Merge(snapshot, Store);
 
+    /// <summary>The hub's friendly name from the full snapshot — unlike <see cref="Hubs"/>, this
+    /// covers a hub even when every one of its ports is zoned to the front panel and it has
+    /// nothing left to show in the grouped view.</summary>
+    public string? FindHubDisplayName(string hubKey) =>
+        _snapshot.Hubs.FirstOrDefault(h => h.HubKey == hubKey)?.DisplayName;
+
     // "port|identity" of every device on screen after the last rebuild; a tile whose device is
     // not in here is new and plays the appear animation.
     private HashSet<string> _shownDevices = new();
@@ -257,7 +267,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
             var hubIndex = 0;
             foreach (var hub in _snapshot.Hubs)
             {
-                var vm = new HubGroupViewModel(this, hub, hubIndex++);
+                // Index is only consumed if this hub ends up with any visible ports (below) —
+                // otherwise a hub emptied out entirely by front-panel zoning would still burn a
+                // number, making the next visible hub's header skip one (e.g. "HUB 1" then "HUB 3").
+                var vm = new HubGroupViewModel(this, hub, hubIndex);
                 foreach (var port in hub.Ports.Where(ShouldShow))
                 {
                     var deviceKey = port.Device is null ? null : $"{port.PortKey}|{port.Device.Identity}";
@@ -276,7 +289,10 @@ public sealed partial class AppController : ObservableObject, IDisposable
                     }
                 }
                 if (vm.Ports.Count > 0)
+                {
                     Hubs.Add(vm);
+                    hubIndex++;
+                }
             }
 
             _shownDevices = shownNow;
@@ -287,6 +303,7 @@ public sealed partial class AppController : ObservableObject, IDisposable
                 var again = _snapshot.AllPorts.FirstOrDefault(p =>
                     p.Device is not null &&
                     p.Device.Identity.Equals(_lastToggledIdentity, StringComparison.OrdinalIgnoreCase));
+                _lastToggledIdentity = null; // one-shot: don't re-fire on every future, unrelated refresh
                 if (again is not null)
                     PortFocused?.Invoke(again);
             }

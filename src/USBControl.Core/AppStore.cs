@@ -31,21 +31,40 @@ public sealed class AppStore
         Directory.CreateDirectory(RootDir);
         Directory.CreateDirectory(PhotosDir);
 
+        if (!File.Exists(StorePath))
+            return;
+
+        if (TryReadStore(out var data))
+        {
+            Data = data;
+            return;
+        }
+
+        // A file that's briefly locked (e.g. an antivirus scan right after the previous save)
+        // fails to read exactly like a genuinely corrupt one — but treating that the same as
+        // "no saved data" here means the very next Save() permanently overwrites a perfectly
+        // good store.json with an empty one. One short retry covers the common transient case
+        // without changing behavior for an actually-corrupt file (it just fails again).
+        Thread.Sleep(250);
+        Data = TryReadStore(out data) ? data : new AppData();
+    }
+
+    private bool TryReadStore(out AppData data)
+    {
         try
         {
-            if (File.Exists(StorePath))
-            {
-                var json = File.ReadAllText(StorePath);
-                Data = JsonSerializer.Deserialize<AppData>(json, JsonOptions) ?? new AppData();
-                Data.Devices ??= new(StringComparer.OrdinalIgnoreCase);
-                Data.Ports ??= new(StringComparer.OrdinalIgnoreCase);
-                Data.Profiles ??= new();
-                Data.Settings ??= new();
-            }
+            var json = File.ReadAllText(StorePath);
+            data = JsonSerializer.Deserialize<AppData>(json, JsonOptions) ?? new AppData();
+            data.Devices ??= new(StringComparer.OrdinalIgnoreCase);
+            data.Ports ??= new(StringComparer.OrdinalIgnoreCase);
+            data.Profiles ??= new();
+            data.Settings ??= new();
+            return true;
         }
         catch
         {
-            Data = new AppData();
+            data = new AppData();
+            return false;
         }
     }
 

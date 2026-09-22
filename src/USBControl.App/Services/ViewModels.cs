@@ -127,7 +127,7 @@ public sealed class PortViewModel : INotifyPropertyChanged
         get
         {
             var hub = Controller.Hubs.FirstOrDefault(h => h.Entry.HubKey == Entry.HubKey);
-            return hub?.DisplayName ?? Entry.HubKey;
+            return hub?.DisplayName ?? Controller.FindHubDisplayName(Entry.HubKey) ?? Entry.HubKey;
         }
     }
 
