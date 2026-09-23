@@ -209,6 +209,18 @@ machines.
 - Auto-apply a profile when a game starts, and global hotkeys (deliberately deferred until the
   toggle path has been proven across more real hardware than the one webcam test so far)
 
+## Code signing policy
+
+Release builds are built from this repository by GitHub Actions and, once approved, signed by
+[SignPath Foundation](https://signpath.org) (free code signing for open-source projects). Until
+that is set up, release builds are unsigned and say so in their release notes.
+
+- **Committers and reviewers / approvers:** the project owner, [@tuskilicious](https://github.com/tuskilicious).
+- **Only tagged releases are signed**, from the public source in this repository, never from
+  local builds.
+- **Privacy:** Porthole does not collect or transmit any data. Everything it stores stays in
+  `%APPDATA%\USBControl\` on your PC, and the app makes no network connections.
+
 ## Naming
 
 The app was renamed from **USB Control** to **Porthole**; the display name, window title, tray
