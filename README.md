@@ -8,8 +8,9 @@ Every physical USB port on your PC becomes a labeled tile you can rename, descri
 and a photo, and switch on or off with one click, without reaching behind the case or
 unplugging anything.
 
-> **Status: beta (v0.1).** It works against simulated hardware and in automated tests, but has
-> had limited testing on real machines. It is unsigned and must run as administrator. Please read
+> **Status: beta (v0.1).** It works against simulated hardware and in automated tests, and the
+> core path (live port map, disable, re-enable, auto-refresh on unplug) has been verified on real
+> hardware with a USB webcam, but it has had limited testing on real machines. It is unsigned and must run as administrator. Please read
 > [What this does to your PC and how to undo it](#what-this-does-to-your-pc-and-how-to-undo-it)
 > before you use it.
 
@@ -121,8 +122,9 @@ PowerShell command above. Safe mode does **not** undo a persistent disable.
   the file's SHA-256 with the value on the release page.
 - Anti-cheat software may object to a tool that toggles devices while a game is running.
 - Windows Update or a driver reinstall can re-enable a device you disabled.
-- Tested mainly against a simulated USB bus, with limited testing on real hardware; other
-  controller, hub and Bluetooth combinations may behave differently. Please report problems.
+- Tested mainly against a simulated USB bus. Disabling and re-enabling has been confirmed on
+  real hardware with a USB webcam only; other controller, hub and Bluetooth combinations may
+  behave differently. Please report problems.
 
 ## Download and run
 
@@ -181,7 +183,9 @@ dotnet test tests/USBControl.Tests/USBControl.Tests.csproj
 ```
 
 What the fake bus cannot tell you is how real hardware behaves (composite devices, devices that
-refuse to disable, re-enumeration). That still needs testing on physical machines.
+refuse to disable, re-enumeration). A real-hardware pass has been done with a USB webcam
+(disable, re-enable, unplug auto-refresh); anything beyond that still needs testing on physical
+machines.
 
 ## How it works (the short version)
 
@@ -198,11 +202,12 @@ refuse to disable, re-enumeration). That still needs testing on physical machine
 
 ## Roadmap ideas
 
-- Validate on real hardware across more machines, and decide whether controller order is real.
+- Validate on real hardware beyond the webcam test (controllers, HOTAS, keyboards, hubs) across
+  more machines, and decide whether controller order is real.
 - Webcam snapshot as the device photo
 - Storage devices support with safe-eject-style actions
 - Auto-apply a profile when a game starts, and global hotkeys (deliberately deferred until the
-  toggle path has been proven on real hardware)
+  toggle path has been proven across more real hardware than the one webcam test so far)
 
 ## Naming
 
