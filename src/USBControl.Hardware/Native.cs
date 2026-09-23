@@ -76,17 +76,18 @@ internal static class Native
     public const uint CM_PROB_DISABLED_SERVICE = 56;
 
     public const int CR_SUCCESS = 0;
+    public const int CR_BUFFER_SMALL = 0x1A;
     public const uint CM_DISABLE_PERSISTENT = 0x00000001;
     public const uint CM_LOCATE_DEVNODE_NORMAL = 0;
 
     // CM_DRP_* registry property codes (cfgmgr32.h)
     public const uint CM_DRP_DEVICEDESC = 0x00000001;
     public const uint CM_DRP_HARDWAREID = 0x00000002;
-    public const uint CM_DRP_ADDRESS = 0x00000001; // "ulAddress" — USB: port index on the parent hub
-    public const uint CM_DRP_CLASS = 0x00000005;
-    public const uint CM_DRP_MFG = 0x00000009;
-    public const uint CM_DRP_FRIENDLYNAME = 0x0000000C;
-    public const uint CM_DRP_ENUMERATOR_NAME = 0x00000016;
+    public const uint CM_DRP_DRIVER = 0x0000000A; // the driver key, "{class-guid}\NNNN"
+    public const uint CM_DRP_CLASS = 0x00000008;
+    public const uint CM_DRP_MFG = 0x0000000C;
+    public const uint CM_DRP_FRIENDLYNAME = 0x0000000D;
+    public const uint CM_DRP_ENUMERATOR_NAME = 0x00000017;
 
     // ---------- Structs ----------
     [StructLayout(LayoutKind.Sequential)]
@@ -301,7 +302,8 @@ internal static class Native
     {
         uint len = 0;
         var cr = CM_Get_DevNode_Registry_PropertyW(devInst, property, out _, (StringBuilder?)null, ref len, 0);
-        if (cr != CR_SUCCESS || len == 0)
+        // The sizing call reports the needed length with CR_BUFFER_SMALL, not CR_SUCCESS.
+        if ((cr != CR_SUCCESS && cr != CR_BUFFER_SMALL) || len == 0)
             return null;
         var sb = new StringBuilder((int)len);
         return CM_Get_DevNode_Registry_PropertyW(devInst, property, out _, sb, ref len, 0) == CR_SUCCESS
@@ -317,7 +319,8 @@ internal static class Native
     public static uint? GetCmDword(uint devInst, uint property)
     {
         uint len = 0;
-        if (CM_Get_DevNode_Registry_PropertyW(devInst, property, out _, (byte[]?)null, ref len, 0) != CR_SUCCESS || len != 4)
+        var cr = CM_Get_DevNode_Registry_PropertyW(devInst, property, out _, (byte[]?)null, ref len, 0);
+        if ((cr != CR_SUCCESS && cr != CR_BUFFER_SMALL) || len != 4)
             return null;
         var buf = new byte[4];
         if (CM_Get_DevNode_Registry_PropertyW(devInst, property, out _, buf, ref len, 0) != CR_SUCCESS)

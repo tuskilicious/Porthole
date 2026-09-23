@@ -37,6 +37,7 @@ public sealed class UsbTopologyService : ITopologyService, IDisposable
         var hubIndex = 0;
 
         Diag.Log("snapshot: begin");
+        _driverKeys = BuildDriverKeyMap();
         foreach (var hubPath in EnumerateHubPaths())
         {
             hubIndex++;
@@ -343,7 +344,7 @@ public sealed class UsbTopologyService : ITopologyService, IDisposable
             }
 
             var descriptor = info.DeviceDescriptor;
-            var instanceId = GetConnectionInstanceId(hubHandle, portIndex);
+            var instanceId = ResolveInstanceId(GetConnectionInstanceId(hubHandle, portIndex));
 
             var device = new UsbDeviceInfo
             {
@@ -389,6 +390,45 @@ public sealed class UsbTopologyService : ITopologyService, IDisposable
         {
             Marshal.FreeHGlobal(ptr);
         }
+    }
+
+    // The hub IOCTL only yields a *driver key* ("{class-guid}\0005"), never a device instance ID.
+    // Every devnode lookup (name, disabled state, CM_Disable_DevNode) needs the instance ID, so map
+    // driver key -> instance ID once per snapshot by walking the present USB-enumerated devnodes.
+    private Dictionary<string, string> _driverKeys = new(StringComparer.OrdinalIgnoreCase);
+
+    private string? ResolveInstanceId(string? driverKey)
+    {
+        if (string.IsNullOrEmpty(driverKey))
+            return null;
+        return _driverKeys.TryGetValue(driverKey, out var id) ? id : null;
+    }
+
+    private static Dictionary<string, string> BuildDriverKeyMap()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var set = Native.SetupDiGetClassDevsW(IntPtr.Zero, "USB", IntPtr.Zero,
+            Native.DIGCF_PRESENT | Native.DIGCF_ALLCLASSES);
+        if (set == new IntPtr(-1) || set == IntPtr.Zero)
+            return map;
+        try
+        {
+            for (var i = 0; ; i++)
+            {
+                var data = new Native.SP_DEVINFO_DATA { cbSize = Marshal.SizeOf<Native.SP_DEVINFO_DATA>() };
+                if (!Native.SetupDiEnumDeviceInfo(set, i, ref data))
+                    break;
+                var key = Native.GetCmString(data.DevInst, Native.CM_DRP_DRIVER);
+                var id = Native.GetDeviceId(data.DevInst);
+                if (!string.IsNullOrEmpty(key) && id.Length > 0)
+                    map[key] = id;
+            }
+        }
+        finally
+        {
+            Native.SetupDiDestroyDeviceInfoList(set);
+        }
+        return map;
     }
 
     private static string? GetConnectionInstanceId(IntPtr hubHandle, uint portIndex)
@@ -465,8 +505,8 @@ public sealed class UsbTopologyService : ITopologyService, IDisposable
 
             device.DisplayName =
                 Native.GetCmString(devInst, Native.CM_DRP_FRIENDLYNAME)
+                ?? product // the device's own product string beats a generic "USB Composite Device"
                 ?? Native.GetCmString(devInst, Native.CM_DRP_DEVICEDESC)
-                ?? product
                 ?? device.HardwareId;
             device.Manufacturer = Native.GetCmString(devInst, Native.CM_DRP_MFG) ?? "";
             device.ClassName = Native.GetCmString(devInst, Native.CM_DRP_CLASS) ?? "";
