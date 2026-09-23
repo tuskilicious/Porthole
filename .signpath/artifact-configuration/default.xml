@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <!-- The workflow uploads a zip containing only Porthole.exe; SignPath Authenticode-signs it. -->
+  <zip-file>
+    <pe-file path="Porthole.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
